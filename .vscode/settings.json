@@ -1,0 +1,53 @@
+{
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false,
+    // GO settings
+    "go.coverOnSingleTestFile": true,
+    "go.coverOnSave": true,
+    "go.coverageDecorator": {
+		"coveredHighlightColor": "rgba(64,128,128,0.2)",
+		"uncoveredHighlightColor": "rgba(128,64,64,0.2)",
+    "coveredBorderColor": "rgba(64,128,128,0.05)",
+		"coveredGutterStyle": "blockgreen",
+		"uncoveredGutterStyle": "blockred"
+	},
+    "go.lintOnSave": "package",
+    "go.buildOnSave": "off",
+    "go.useLanguageServer": true,
+    "go.formatTool": "gofmt",
+    "[go]": {
+      "editor.insertSpaces": false,
+      "editor.tabSize": 4,
+      "editor.rulers": [120],
+      "editor.formatOnSave": true,
+      "editor.detectIndentation": false,
+    },
+    // todo-tree settings
+    "todo-tree.general.statusBar": "tags",
+    "todo-tree.highlights.customHighlight": {
+        "TODO": {
+            "icon": "check",
+            "type": "line",
+            "iconColour": "yellow",
+            "foreground": "red",
+            "background": "yellow"
+        },
+        "FIXME": {
+            "icon": "beaker",
+            "type": "line",
+            "iconColour": "red",
+            "foreground": "white",
+            "background": "red"
+        }
+    },
+    "cSpell.words": [
+        "autogen",
+        "Multicanvas",
+        "rollups",
+        "Wallcovering",
+        "Wallcoverings"
+	],
+	"makefile.makePath": "C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe",
+	
+}
