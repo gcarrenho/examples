@@ -30,7 +30,7 @@ import (
 	"math/rand"
 	"time"
 
-	api "github.com/gcarrenho/routeguide/api/v1"
+	api "github.com/gcarrenho/routeguide2/api/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"

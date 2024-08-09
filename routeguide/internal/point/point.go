@@ -1,7 +1,10 @@
 package point
 
-/*
-import "math"
+import (
+	"math"
+
+	api "github.com/gcarrenho/routeguide2/api/v1"
+)
 
 type point struct {
 	//store                  *store
@@ -58,4 +61,3 @@ func inRange(point *api.Point, rect *api.Rectangle) bool {
 	}
 	return false
 }
-*/
