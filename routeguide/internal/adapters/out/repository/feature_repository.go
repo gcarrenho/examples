@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"os"
 	"sync"
 
 	"github.com/gcarrenho/routeguide2/internal/core/model"
@@ -51,16 +52,16 @@ func (repo *FeatureRepositoryImpl) ListFeatures(ctx context.Context, rect model.
 
 func (repo *FeatureRepositoryImpl) loadFeatures(filePath string) error {
 	var data []byte
-	/*if filePath != "" {
+	if filePath != "" {
 		var err error
 		data, err = os.ReadFile(filePath)
 		if err != nil {
 			return err
 		}
-	} else {*/
-	// Example data or some default feature data
-	data = exampleData
-	//}
+	} else {
+		// Example data or some default feature data
+		data = exampleData
+	}
 	return json.Unmarshal(data, &repo.savedFeatures)
 }
 

@@ -20,7 +20,7 @@ var (
 	certFile   = flag.String("cert_file", "path/to/server.crt", "The file containing the CA root certificate")
 	keyFile    = flag.String("key_file", "path/to/server.key", "The file containing the server's private key")
 	port       = flag.Int("port", 50051, "The server port")
-	jsonDBFile = flag.String("json_db_file", "features.json", "A json file containing a list of features")
+	jsonDBFile = flag.String("json_db_file", "", "A json file containing a list of features")
 )
 
 func main() {
