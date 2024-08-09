@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 
-	api "github.com/gcarrenho/routeguide/api/v1"
 	adapters "github.com/gcarrenho/routeguide/internal/adapters/in/grpc"
 	"github.com/gcarrenho/routeguide/internal/adapters/out/repository"
 	service "github.com/gcarrenho/routeguide/internal/core/services"
@@ -39,16 +38,19 @@ func main() {
 		}
 		opts = append(opts, grpc.Creds(creds))
 	}
-	grpcServer := grpc.NewServer(opts...)
 
-	api.RegisterRouteGuideServer(grpcServer, adapters.NewGRPCServer(featureSvc))
+	gRPCServer, err := adapters.NewGRPCServer(&adapters.Config{FeatureSvc: featureSvc}, opts...)
+	if err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	grpcLn, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	if err := grpcServer.Serve(lis); err != nil {
+	if err := gRPCServer.Serve(grpcLn); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
 }

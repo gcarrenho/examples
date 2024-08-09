@@ -9,27 +9,48 @@ import (
 	api "github.com/gcarrenho/routeguide/api/v1"
 	"github.com/gcarrenho/routeguide/internal/core/model"
 	"github.com/gcarrenho/routeguide/internal/core/ports"
+	"google.golang.org/grpc"
 )
 
 var _ api.RouteGuideServer = (*GRPCServer)(nil)
 
-type GRPCServer struct {
-	api.UnimplementedRouteGuideServer
-	featureSvc ports.FeatureService
+type Config struct {
+	FeatureSvc ports.FeatureService
 	mu         sync.Mutex // protects routeNotes
-	routeNotes map[string][]*api.RouteNote
+	RouteNotes map[string][]*api.RouteNote
 }
 
-func NewGRPCServer(featureSvc ports.FeatureService) *GRPCServer {
-	return &GRPCServer{
-		featureSvc: featureSvc,
-		routeNotes: make(map[string][]*api.RouteNote),
+type GRPCServer struct {
+	api.UnimplementedRouteGuideServer
+	*Config
+}
+
+func newGRPCServer(config *Config) (srv *GRPCServer, err error) {
+	srv = &GRPCServer{
+		Config: config,
 	}
+	srv.Config.RouteNotes = make(map[string][]*api.RouteNote)
+	return srv, nil
+}
+
+func NewGRPCServer(config *Config, grpcOpts ...grpc.ServerOption) (
+	*grpc.Server,
+	error,
+) {
+	gsrv := grpc.NewServer(grpcOpts...) // Create the server gRPC with grpcOpts
+
+	srv, err := newGRPCServer(config) // Create an instance of gRPC server with config
+	if err != nil {
+		return nil, err
+	}
+	api.RegisterRouteGuideServer(gsrv, srv) // Registers  the our server(srv) in the gRPC server under th "LogServer" services defined in api.
+
+	return gsrv, nil
 }
 
 func (s *GRPCServer) GetFeature(ctx context.Context, point *api.Point) (*api.Feature, error) {
 	domainPoint := model.Point{Latitude: point.Latitude, Longitude: point.Longitude}
-	feature, err := s.featureSvc.GetFeature(ctx, domainPoint)
+	feature, err := s.Config.FeatureSvc.GetFeature(ctx, domainPoint)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +71,7 @@ func (s *GRPCServer) ListFeatures(rect *api.Rectangle, stream api.RouteGuide_Lis
 		Lo: model.Point{Latitude: rect.Lo.Latitude, Longitude: rect.Lo.Longitude},
 		Hi: model.Point{Latitude: rect.Hi.Latitude, Longitude: rect.Hi.Longitude},
 	}
-	features, err := s.featureSvc.ListFeatures(stream.Context(), domainRect)
+	features, err := s.Config.FeatureSvc.ListFeatures(stream.Context(), domainRect)
 	if err != nil {
 		return err
 	}
@@ -76,7 +97,7 @@ func (s *GRPCServer) RecordRoute(stream api.RouteGuide_RecordRouteServer) error 
 	for {
 		point, err := stream.Recv()
 		if err == io.EOF {
-			summary, err := s.featureSvc.RecordRoute(stream.Context(), points)
+			summary, err := s.Config.FeatureSvc.RecordRoute(stream.Context(), points)
 			if err != nil {
 				return err
 			}
@@ -103,15 +124,17 @@ func (s *GRPCServer) RouteChat(stream api.RouteGuide_RouteChatServer) error {
 		if err != nil {
 			return err
 		}
+		//Maybe we need a service method to do this.
+
 		key := serialize(in.Location)
 
 		s.mu.Lock()
-		s.routeNotes[key] = append(s.routeNotes[key], in)
+		s.Config.RouteNotes[key] = append(s.Config.RouteNotes[key], in)
 		// Note: this copy prevents blocking other clients while serving this one.
 		// We don't need to do a deep copy, because elements in the slice are
 		// insert-only and never modified.
-		rn := make([]*api.RouteNote, len(s.routeNotes[key]))
-		copy(rn, s.routeNotes[key])
+		rn := make([]*api.RouteNote, len(s.Config.RouteNotes[key]))
+		copy(rn, s.Config.RouteNotes[key])
 		s.mu.Unlock()
 
 		for _, note := range rn {
