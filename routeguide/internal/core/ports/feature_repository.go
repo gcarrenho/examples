@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/gcarrenho/routeguide2/internal/core/model"
+	"github.com/gcarrenho/routeguide/internal/core/model"
 )
 
 type FeatureRepository interface {

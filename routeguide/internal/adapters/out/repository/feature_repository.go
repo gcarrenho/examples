@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/gcarrenho/routeguide2/internal/core/model"
-	"github.com/gcarrenho/routeguide2/internal/core/ports"
+	"github.com/gcarrenho/routeguide/internal/core/model"
+	"github.com/gcarrenho/routeguide/internal/core/ports"
 )
 
 var _ ports.FeatureRepository = (*FeatureRepositoryImpl)(nil)

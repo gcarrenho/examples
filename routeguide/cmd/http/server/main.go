@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	hdl "github.com/gcarrenho/routeguide2/internal/adapters/in/http"
-	"github.com/gcarrenho/routeguide2/internal/adapters/out/repository"
-	service "github.com/gcarrenho/routeguide2/internal/core/services"
+	hdl "github.com/gcarrenho/routeguide/internal/adapters/in/http"
+	"github.com/gcarrenho/routeguide/internal/adapters/out/repository"
+	service "github.com/gcarrenho/routeguide/internal/core/services"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
 )

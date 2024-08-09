@@ -1,4 +1,4 @@
-module github.com/gcarrenho/routeguide2
+module github.com/gcarrenho/routeguide
 
 go 1.22.0
 

@@ -6,10 +6,10 @@ import (
 	"log"
 	"net"
 
-	api "github.com/gcarrenho/routeguide2/api/v1"
-	adapters "github.com/gcarrenho/routeguide2/internal/adapters/in/grpc"
-	"github.com/gcarrenho/routeguide2/internal/adapters/out/repository"
-	service "github.com/gcarrenho/routeguide2/internal/core/services"
+	api "github.com/gcarrenho/routeguide/api/v1"
+	adapters "github.com/gcarrenho/routeguide/internal/adapters/in/grpc"
+	"github.com/gcarrenho/routeguide/internal/adapters/out/repository"
+	service "github.com/gcarrenho/routeguide/internal/core/services"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

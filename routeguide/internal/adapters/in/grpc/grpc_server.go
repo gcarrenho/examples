@@ -6,9 +6,9 @@ import (
 	"io"
 	"sync"
 
-	api "github.com/gcarrenho/routeguide2/api/v1"
-	"github.com/gcarrenho/routeguide2/internal/core/model"
-	"github.com/gcarrenho/routeguide2/internal/core/ports"
+	api "github.com/gcarrenho/routeguide/api/v1"
+	"github.com/gcarrenho/routeguide/internal/core/model"
+	"github.com/gcarrenho/routeguide/internal/core/ports"
 )
 
 var _ api.RouteGuideServer = (*GRPCServer)(nil)
