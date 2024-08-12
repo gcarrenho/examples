@@ -33,14 +33,14 @@ Start the Kafka Docker container:
 ## Run Services
 Move to inside the server that you want to run.
 
-order-service
+order-service (mv /golang-kafka/order-service/cmd/)
 
 	go run order_server.go
 
-product-service
+product-service (mv /golang-kafka/product-service/cmd/)
 
 	go run product_server.go
 
-user-service
+user-service (mv /golang-kafka/user-service/cmd/)
 
 	go run user_server.go
