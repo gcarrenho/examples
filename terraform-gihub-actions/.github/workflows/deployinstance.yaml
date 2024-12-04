@@ -1,0 +1,46 @@
+name: terraform-automation
+
+on:
+  pull_request:
+    types: [ labeled ]
+
+concurrency: 
+  group: ${{ github.action == 'terraform-automation' }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+    working-directory: ./terraform
+
+jobs:
+
+  deplyment_by_terraform:
+    name: 'Deployment By Terraform'
+    runs-on: ubuntu-latest
+    if: ${{ github.event.label.name == 'deploy-staging' }}
+
+    # Add "id-token" with the intended permissions.
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          workload_identity_provider: 'projects/709484762220/locations/global/workloadIdentityPools/my-test/providers/my-test-provider'
+          service_account: 'cuentadetest@gcarreno-project-test.iam.gserviceaccount.com'
+ 
+      
+      # Generates an execution plan for Terraform
+      - name: Terraform Apply
+        continue-on-error: true
+        run: |
+          terraform init 
+          terraform apply -auto-approve
+      

@@ -1,5 +1,5 @@
 # Golang-Kafka
-Apache Kafka is a distributed event streaming platform that provides a reliable and scalable way to publish, subscribe, and process streams of records in real-time.
+Apache Kafka (https://kafka.apache.org/) is a distributed event streaming platform that provides a reliable and scalable way to publish, subscribe, and process streams of records in real-time.
 Golang, with its simplicity, efficiency, and strong concurrency support, is an excellent choice for building high-performance applications that integrate with Kafka
 
 ## Description

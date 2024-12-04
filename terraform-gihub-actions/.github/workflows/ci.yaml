@@ -1,0 +1,13 @@
+name: simple job
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  hello:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Hello Word
+        run: echo "hello word"
