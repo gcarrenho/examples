@@ -2,7 +2,13 @@
 
 package model
 
-import domains "github.com/gcarrenho/hackernews/internal/core/domains"
+import (
+	userdomain "github.com/gcarrenho/hackernews/internal/core/domains/users"
+	linksdomain "github.com/gcarrenho/hackernews/internal/core/domains/links"
+
+)
+
+
 
 type Link struct {
 	ID      string `json:"id"`
@@ -32,19 +38,19 @@ type User struct {
 	Name string `json:"name"`
 }
 
-func (l *Link) LinkToDomain() domains.Link{
-	return domains.Link{
+func (l *Link) LinkToDomain() linksdomain.Link{
+	return linksdomain.Link{
 		ID:      l.ID,
 		Address: l.Address,
 		Title:   l.Title,
-		User: &domains.User{
+		User: &userdomain.User{
 			ID:       l.User.ID,
 			Username: l.User.Name,
 		},
 	}
 }
 
-func DomainToLink(link domains.Link) Link{
+func DomainToLink(link linksdomain.Link) Link{
 	return Link{
 		ID:      link.ID,
 		Address: link.Address,
