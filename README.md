@@ -15,6 +15,9 @@ This repository provides various examples to help learn new concepts. Currently,
 	- Server request with Http.
 	- Structuring project using Hexagonal Architecture.
 
+- hakernews
+	- This project implements a **GraphQL API** using Go with a hexagonal architecture. It is designed to illustrate how to structure a project with input and output adapters, domains, services, and ports.
+	- The API includes a simple example of handling GraphQL queries with dummy responses for educational purposes.
 
 ## Next steps
 - routeguide
