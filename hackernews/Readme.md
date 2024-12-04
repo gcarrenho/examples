@@ -162,7 +162,7 @@ Example:
 
 ```go
 func (r *Resolver) Links(ctx context.Context) ([]*model.Link, error) {
-	links, err := r.linkRSrv.GetAllLinks(ctx) // Real implementation
+	links, err := r.linkSrv.GetAllLinks(ctx) // Real implementation
 	if err != nil {
 		return nil, err
 	}
