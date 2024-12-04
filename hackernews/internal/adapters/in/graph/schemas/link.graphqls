@@ -1,0 +1,19 @@
+type Link {
+  id: ID!
+  title: String!
+  address: String!
+  user: User!
+}
+
+type Query {
+  links: [Link!]!
+}
+
+input NewLink {
+  title: String!
+  address: String!
+}
+
+type Mutation {
+  createLink(input: NewLink!): Link!
+}
