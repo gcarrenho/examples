@@ -2,6 +2,8 @@
 
 package model
 
+import domains "github.com/gcarrenho/hackernews/internal/core/domains"
+
 type Link struct {
 	ID      string `json:"id"`
 	Title   string `json:"title"`
@@ -28,4 +30,28 @@ type Query struct {
 type User struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+func (l *Link) LinkToDomain() domains.Link{
+	return domains.Link{
+		ID:      l.ID,
+		Address: l.Address,
+		Title:   l.Title,
+		User: &domains.User{
+			ID:       l.User.ID,
+			Username: l.User.Name,
+		},
+	}
+}
+
+func DomainToLink(link domains.Link) Link{
+	return Link{
+		ID:      link.ID,
+		Address: link.Address,
+		Title:   link.Title,
+		User: &User{
+			ID:   link.User.ID,
+			Name: link.User.Username,
+		},
+	}
 }

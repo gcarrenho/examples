@@ -19,7 +19,17 @@ func (r *mutationResolver) CreateLink(ctx context.Context, input model.NewLink) 
 	link.Title = input.Title
 	user.Name = "test"
 	link.User = &user
-	return &link, nil
+
+	domainLink := link.LinkToDomain()
+
+	newLink, err := r.LinkSrv.CreateLink(domainLink)
+	if err != nil {
+		return &model.Link{}, err
+	}
+
+	graphLink := model.DomainToLink(newLink)
+
+	return &graphLink, nil
 }
 
 // Links is the resolver for the links field.
