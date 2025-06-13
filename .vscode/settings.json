@@ -47,5 +47,9 @@
         "rollups",
         "Wallcovering",
         "Wallcoverings"
-	],	
+	],
+	"go.toolsEnvVars": {
+		"GOROOT": "C:\\Program Files\\Go",
+		"PATH": "C:\\Users\\CarrenoG\\go\\bin;${env:PATH}"
+	},	
 }
