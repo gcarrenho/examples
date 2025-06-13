@@ -23,7 +23,7 @@ func NewOrderComponentImpl(deps Deps) OrderComponent {
 }
 
 // GetPaymentByID retrieves a payment by its ID.
-func (c *OrderComponentImpl) GetOrderByID(orderID string) (string, error) {
+func (c *OrderComponentImpl) FindOrderByID(orderID string) (string, error) {
 	/*p, err := c.paymentRepository.GetPaymentByID(orderID)
 	if err != nil {
 		return "", err

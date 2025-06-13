@@ -1,6 +1,6 @@
 package users
 
-import "github.com/gcarrenho/component-based/option-2/internal/users/domain"
+import domain "github.com/gcarrenho/component-based/option-2/internal/users/model"
 
 var _ UserComponent = (*UserComponentImpl)(nil)
 
@@ -13,7 +13,6 @@ func NewService(repo repository) *UserComponentImpl {
 }
 
 func (s *UserComponentImpl) CreateUser(userID string) (domain.User, error) {
-
 	/*ok, err := s.userSvc.IsUserActive(userID)
 	  if err != nil || !ok {
 	      return ErrUserNotActive
@@ -26,4 +25,14 @@ func (s *UserComponentImpl) CreateUser(userID string) (domain.User, error) {
 
 	//return s.repo.Save(order)
 	return domain.User{}, nil
+}
+
+func (s *UserComponentImpl) FindUserByID(userID string) (domain.User, error) {
+	// Simulate fetching user from repository
+	user, err := s.repo.GetByID(userID)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return user, nil
 }

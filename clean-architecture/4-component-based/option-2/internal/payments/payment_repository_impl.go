@@ -3,7 +3,7 @@ package payments
 import (
 	"database/sql"
 
-	"github.com/gcarrenho/component-based/option-2/internal/payments/domain"
+	"github.com/gcarrenho/component-based/option-2/internal/payments/model"
 )
 
 var _ paymentRepository = (*paymentRepositoryImpl)(nil)
@@ -19,6 +19,6 @@ func newPaymentRepositoryImpl(db *sql.DB) *paymentRepositoryImpl {
 	}
 }
 
-func (r *paymentRepositoryImpl) GetPaymentByID(paymentID string) (domain.Payment, error) {
-	return domain.Payment{}, nil // This is a placeholder implementation.
+func (r *paymentRepositoryImpl) GetPaymentByID(paymentID string) (model.Payment, error) {
+	return model.Payment{}, nil // This is a placeholder implementation.
 }

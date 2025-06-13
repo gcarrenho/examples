@@ -13,6 +13,7 @@ require (
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
+	go.uber.org/mock v0.5.2 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 )
 

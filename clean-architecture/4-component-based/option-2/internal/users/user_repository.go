@@ -1,5 +1,7 @@
 package users
 
+import "github.com/gcarrenho/component-based/option-2/internal/users/model"
+
 type repository interface {
-	FindByID(userID string, items []string) error
+	GetByID(userID string) (model.User, error)
 }
