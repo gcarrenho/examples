@@ -11,6 +11,7 @@ This repository provides various examples to help learn new concepts. Currently,
 		- Package-by-Feature (grouping code by domain instead of layer).
 		- Hexagonal Architecture (Ports and Adapters).
 		- Component-Based Architecture (modular, self-contained components with internal encapsulation).
+		
 	- Designed to illustrate trade-offs, boundaries, and best practices for decoupling and testability.
 
 - golang-kafka
