@@ -7,7 +7,7 @@ import (
 
 var _ user.PaymentUserService = (*PaymentAdapter)(nil)
 
-// implementa lo que necesita el consumidor de user en este caso es payment
+// Implement that is needed by consumero of user in this case payment.
 type PaymentAdapter struct {
 	userService *users.UserComponentImpl
 }
@@ -18,8 +18,14 @@ func NewOrderAdapter(userService *users.UserComponentImpl) *PaymentAdapter {
 	}
 }
 
-func (a *PaymentAdapter) IsUserActive(userID string) (user.UserDTO, error) {
+func (p *PaymentAdapter) IsUserActive(userID string) (bool, error) {
 	/*user := a.userService.FindByID(userID)
 	return user.Status == "active", nil*/
-	return user.UserDTO{}, nil
+	return true, nil
+}
+
+func (a *PaymentAdapter) GetBillingInfo(userID string) (user.BillingInfo, error) {
+	return user.BillingInfo{
+		Name: "example",
+	}, nil
 }

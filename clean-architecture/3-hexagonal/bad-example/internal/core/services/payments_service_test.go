@@ -32,5 +32,4 @@ func TestFindPaymentByID(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedPayment, payment)
-	//mockRepo.AssertExpectations(t)
 }

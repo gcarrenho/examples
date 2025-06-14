@@ -1,6 +1,6 @@
 package order
 
-// definido por payment, implementado por orders
+// defined by payment, implemented by orders
 type OrderUpdater interface {
 	MarkOrderAsPaid(orderID string, paymentID string) error
 }

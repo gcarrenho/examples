@@ -54,7 +54,6 @@ func TestOrderPaymentStatus(t *testing.T) {
 				assert.Equal(t, tt.want, got)
 			}
 
-			//mockPaymentService.AssertExpectations(t)
 		})
 	}
 }

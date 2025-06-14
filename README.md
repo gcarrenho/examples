@@ -3,6 +3,16 @@
 ## Description
 
 This repository provides various examples to help learn new concepts. Currently, it covers basic concepts including:
+- clean-architecture
+	- Collection of architecture patterns applied in Go.
+
+	- Includes:
+		- Layered Architecture (classic 3-layer model: handlers → services → repositories).
+		- Package-by-Feature (grouping code by domain instead of layer).
+		- Hexagonal Architecture (Ports and Adapters).
+		- Component-Based Architecture (modular, self-contained components with internal encapsulation).
+	- Designed to illustrate trade-offs, boundaries, and best practices for decoupling and testability.
+
 - golang-kafka
 	- Producer and Consumer examples(sync and async producer)
 	- Using to different library (sarama and confluent-kafka-go)

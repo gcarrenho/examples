@@ -1,5 +1,5 @@
 package payment
 
-type PaymentStatusChecker interface {
+type PaymentMethodChecker interface {
 	IsPaymentMethodValid(method string) bool
 }
