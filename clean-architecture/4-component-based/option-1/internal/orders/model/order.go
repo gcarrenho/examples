@@ -1,5 +1,6 @@
 package model
 
 type Order struct {
-	ID string
+	ID     string
+	Status string
 }

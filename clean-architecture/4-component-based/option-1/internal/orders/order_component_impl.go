@@ -25,5 +25,5 @@ func NewOrderComponentImpl(deps Deps) OrderComponent {
 
 // GetPaymentByID retrieves a payment by its ID.
 func (o *OrderComponentImpl) FindOrderByID(orderID string) (model.Order, error) {
-	return o.orderRepo.GetOrderByID(orderID) //
+	return o.orderRepo.GetOrderByID(orderID)
 }

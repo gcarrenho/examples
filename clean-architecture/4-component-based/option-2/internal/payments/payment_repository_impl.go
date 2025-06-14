@@ -9,7 +9,6 @@ import (
 var _ paymentRepository = (*paymentRepositoryImpl)(nil)
 
 type paymentRepositoryImpl struct {
-	//DB
 	DB *sql.DB
 }
 

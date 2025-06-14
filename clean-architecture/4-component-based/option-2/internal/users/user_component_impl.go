@@ -1,18 +1,28 @@
 package users
 
-import domain "github.com/gcarrenho/component-based/option-2/internal/users/model"
+import (
+	"database/sql"
+
+	"github.com/gcarrenho/component-based/option-2/internal/users/model"
+)
 
 var _ UserComponent = (*UserComponentImpl)(nil)
 
-type UserComponentImpl struct {
-	repo repository
+type Deps struct {
+	DB *sql.DB
 }
 
-func NewService(repo repository) *UserComponentImpl {
+type UserComponentImpl struct {
+	repo userRepository
+}
+
+func NewUserComponentImpl(deps Deps) UserComponent {
+	repo := newUserRepositoryImpl(deps.DB)
 	return &UserComponentImpl{repo: repo}
 }
 
-func (s *UserComponentImpl) CreateUser(userID string) (domain.User, error) {
+func (s *UserComponentImpl) CreateUser(userID string) (model.User, error) {
+
 	/*ok, err := s.userSvc.IsUserActive(userID)
 	  if err != nil || !ok {
 	      return ErrUserNotActive
@@ -24,15 +34,9 @@ func (s *UserComponentImpl) CreateUser(userID string) (domain.User, error) {
 	  }*/
 
 	//return s.repo.Save(order)
-	return domain.User{}, nil
+	return model.User{}, nil
 }
 
-func (s *UserComponentImpl) FindUserByID(userID string) (domain.User, error) {
-	// Simulate fetching user from repository
-	user, err := s.repo.GetByID(userID)
-	if err != nil {
-		return domain.User{}, err
-	}
-
-	return user, nil
+func (s *UserComponentImpl) FindUserByID(userID string) (model.User, error) {
+	return s.repo.GetUserByID(userID)
 }

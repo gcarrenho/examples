@@ -1,23 +1,25 @@
-package payments
+package orders
 
 import (
 	"database/sql"
 	"testing"
 
+	"github.com/gcarrenho/component-based/option-2/internal/orders/model"
 	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetPaymentByID(t *testing.T) {
+func TestGetOrderByID(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
 	assert.NoError(t, err)
 	defer db.Close()
 
 	// now only check that no crash
 
-	repo := newPaymentRepositoryImpl(db)
+	repo := newOrderRepositoryImpl(db)
 
-	payment, err := repo.GetPaymentByID("some-id")
+	order, err := repo.GetOrderByID("some-id")
 	assert.NoError(t, err)
-	assert.Equal(t, "", payment.ID)
+	assert.Equal(t, model.Order{ID: "1234"}, order)
 }

@@ -1,23 +1,25 @@
-package payments
+package users
 
 import (
 	"database/sql"
 	"testing"
 
+	"github.com/gcarrenho/component-based/option-2/internal/users/model"
 	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetPaymentByID(t *testing.T) {
+func TestGetUserByID(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
 	assert.NoError(t, err)
 	defer db.Close()
 
 	// now only check that no crash
 
-	repo := newPaymentRepositoryImpl(db)
+	repo := newUserRepositoryImpl(db)
 
-	payment, err := repo.GetPaymentByID("some-id")
+	user, err := repo.GetUserByID("some-id")
 	assert.NoError(t, err)
-	assert.Equal(t, "", payment.ID)
+	assert.Equal(t, model.User{}, user)
 }

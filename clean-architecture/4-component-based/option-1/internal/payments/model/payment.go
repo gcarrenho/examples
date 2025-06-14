@@ -1,5 +1,6 @@
 package model
 
 type Payment struct {
-	ID string
+	ID     string
+	Status string
 }

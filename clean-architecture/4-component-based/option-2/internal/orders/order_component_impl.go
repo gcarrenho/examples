@@ -2,12 +2,14 @@ package orders
 
 import (
 	"database/sql"
+
+	"github.com/gcarrenho/component-based/option-2/internal/orders/model"
 )
 
 var _ OrderComponent = (*OrderComponentImpl)(nil)
 
 type OrderComponentImpl struct {
-	//paymentRepository paymentRepository
+	orderRepo orderRepository // uso interno, no exportado
 }
 
 type Deps struct {
@@ -15,19 +17,13 @@ type Deps struct {
 	//Mailer MailService // interfaz que envía emails
 }
 
-// NewPaymentComponent creates a new instance of PaymentComponent.
 func NewOrderComponentImpl(deps Deps) OrderComponent {
-	//repo := newPaymentRepositoryImpl(deps.DB)             // uso interno, no exportado
-	return &OrderComponentImpl{ /*paymentRepository: repo*/ } //controller: deps.Controller
+	repo := newOrderRepositoryImpl(deps.DB)
+	return &OrderComponentImpl{orderRepo: repo}
 
 }
 
 // GetPaymentByID retrieves a payment by its ID.
-func (c *OrderComponentImpl) FindOrderByID(orderID string) (string, error) {
-	/*p, err := c.paymentRepository.GetPaymentByID(orderID)
-	if err != nil {
-		return "", err
-	}
-	return p.ID, nil*/
-	return "", nil // Placeholder implementation
+func (o *OrderComponentImpl) FindOrderByID(orderID string) (model.Order, error) {
+	return o.orderRepo.GetOrderByID(orderID)
 }

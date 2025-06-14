@@ -6,40 +6,40 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gcarrenho/component-based/option-2/internal/users/mocks"
+	"github.com/gcarrenho/component-based/option-2/internal/users/model"
 	"github.com/gin-gonic/gin"
 	"github.com/huandu/go-assert"
-	"github.com/stretchr/testify/mock"
+	"go.uber.org/mock/gomock"
 )
 
-type MockUserService struct {
-	mock.Mock
+type mockUserController struct {
+	userSvc *mocks.MockUserComponent
 }
 
-func (m *MockUserService) FindUserByID(id string) (interface{}, error) {
-	args := m.Called(id)
-	return args.Get(0), args.Error(1)
-}
-
-func TestGetUserByID(t *testing.T) {
+func TestUserController_getByID(t *testing.T) {
 	tests := []struct {
 		name           string
 		userID         string
-		mockSetup      func(*MockUserService)
+		mockSetup      func(*mockUserController)
 		expectedStatus int
 	}{
 		{
-			name:   "success",
-			userID: "u1",
-			mockSetup: func(m *MockUserService) {
-				m.On("FindUserByID", "u1").Return("user123", nil)
+			name:   "valid request",
+			userID: "123",
+			mockSetup: func(m *mockUserController) {
+				m.userSvc.EXPECT().FindUserByID("123").Return(model.User{
+					ID:   "123",
+					Name: "Juan",
+				}, nil)
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:   "service error",
-			userID: "u2",
-			mockSetup: func(m *MockUserService) {
-				m.On("FindUserByID", "u2").Return(nil, errors.New("fail"))
+			name:   "processing error",
+			userID: "123",
+			mockSetup: func(m *mockUserController) {
+				m.userSvc.EXPECT().FindUserByID("123").Return(model.User{}, errors.New("fail"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 		},
@@ -48,22 +48,30 @@ func TestGetUserByID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gin.SetMode(gin.TestMode)
-			mockService := new(MockUserService)
-			tt.mockSetup(mockService)
 
-			ctrl := web.NewUserController(mockService)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			m := &mockUserController{
+				userSvc: mocks.NewMockUserComponent(mockCtrl),
+			}
+
+			tt.mockSetup(m)
+
+			ctrl := NewUserController(m.userSvc)
 
 			r := gin.Default()
-			group := r.Group("/api")
+			gin.SetMode(gin.TestMode)
+			group := r.Group("/user")
+
 			ctrl.RegisterRoutes(group)
 
-			req := httptest.NewRequest("GET", "/api/user/"+tt.userID, nil)
+			req := httptest.NewRequest(http.MethodGet, "/user/"+tt.userID, nil)
 			w := httptest.NewRecorder()
 
 			r.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			mockService.AssertExpectations(t)
 		})
 	}
 }

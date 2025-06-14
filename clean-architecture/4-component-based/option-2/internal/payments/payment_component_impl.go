@@ -1,27 +1,30 @@
 // El componente debe exponerse solo por su punto de entrada, y ser responsable de crear sus propias dependencias internas.
 package payments
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
-var _ PaymentComponent = (*PaymentComponetImpl)(nil)
+var _ PaymentComponent = (*PaymentComponentImpl)(nil)
 
-type PaymentComponetImpl struct {
+type PaymentComponentImpl struct {
 	paymentRepository paymentRepository
 }
 
 type Deps struct {
 	DB *sql.DB
-	//Logger Logger
+	//KafkaProd KafkaProducer // interfaz para el productor Kafka
 }
 
-// NewPaymentComponent creates a new instance of PaymentComponet.
-func NewPaymentComponentImpl(deps Deps) *PaymentComponetImpl {
-	repo := newPaymentRepositoryImpl(deps.DB) // uso interno, no exportado
-	return &PaymentComponetImpl{paymentRepository: repo}
+// NewPaymentComponent creates a new instance of PaymentComponent.
+func NewPaymentComponentImpl(deps Deps) PaymentComponent {
+	repo := newPaymentRepositoryImpl(deps.DB)             // uso interno, no exportado
+	return &PaymentComponentImpl{paymentRepository: repo} //controller: deps.Controller
+
 }
 
 // GetPaymentByID retrieves a payment by its ID.
-func (c *PaymentComponetImpl) ProcessPayment(orderID string, amount float64) (string, error) {
+func (c *PaymentComponentImpl) ProcessPayment(orderID string, amount float64) (string, error) {
 	p, err := c.paymentRepository.GetPaymentByID(orderID)
 	if err != nil {
 		return "", err

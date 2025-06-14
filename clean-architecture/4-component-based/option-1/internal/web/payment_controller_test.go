@@ -1,80 +1,81 @@
 package web
 
 import (
-	"context"
+	"bytes"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gcarrenho/hexagonal/component-based/option-1/internal/payments/core/model"
-	"github.com/gcarrenho/hexagonal/component-based/option-1/mocks"
+	"github.com/gcarrenho/component-based/option-1/mocks"
 	"github.com/gin-gonic/gin"
 	"github.com/huandu/go-assert"
 	"go.uber.org/mock/gomock"
 )
 
 type mockPaymentsHandler struct {
-	paymentService *mocks.MockPaymentsService
+	paymentService *mocks.MockPaymentComponent
 }
 
-func TestGetPaymentByID(t *testing.T) {
-
-	type want struct {
-		status int
-		error  error
-	}
-
-	type testCase struct {
-		name    string
-		orderID string
-		mocks   func(m mockPaymentsHandler)
-		want    want
-	}
-
-	tests := []testCase{
+func TestHandleProcessPayment(t *testing.T) {
+	tests := []struct {
+		name           string
+		payload        string
+		mockSetup      func(*mockPaymentsHandler)
+		expectedStatus int
+	}{
 		{
-			name:    "success - order found",
-			orderID: "123",
-			want:    want{status: http.StatusOK, error: nil},
-			mocks: func(m mockPaymentsHandler) {
-				m.paymentService.EXPECT().
-					FindPaymentByID(context.Background(), "123").
-					Return(model.Payment{ID: "123", Status: "PENDING"}, nil)
+			name:    "valid request",
+			payload: `{"order_id":"123", "amount":100.5}`,
+			mockSetup: func(m *mockPaymentsHandler) {
+				m.paymentService.EXPECT().ProcessPayment("123", 100.5).Return("ok", nil)
 			},
+			expectedStatus: http.StatusCreated,
 		},
 		{
-			name:    "failure - order service error",
-			orderID: "123",
-			want:    want{status: http.StatusInternalServerError, error: errors.New("db error")},
-			mocks: func(m mockPaymentsHandler) {
-				m.paymentService.EXPECT().FindPaymentByID(context.Background(), "123").Return(model.Payment{}, errors.New("db error"))
+			name:           "invalid json",
+			payload:        `{"order_id":123, "amount":"abc"}`,
+			mockSetup:      func(m *mockPaymentsHandler) {}, // No call expected
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:    "processing error",
+			payload: `{"order_id":"123", "amount":100.5}`,
+			mockSetup: func(m *mockPaymentsHandler) {
+				m.paymentService.EXPECT().ProcessPayment("123", 100.5).Return("", errors.New("fail"))
 			},
+			expectedStatus: http.StatusInternalServerError,
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			r := gin.Default()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			gin.SetMode(gin.TestMode)
-			rg := r.Group("")
 
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			m := mockPaymentsHandler{
-				paymentService: mocks.NewMockPaymentsService(mockCtrl),
+			m := &mockPaymentsHandler{
+				paymentService: mocks.NewMockPaymentComponent(mockCtrl),
 			}
-			tc.mocks(m)
 
-			NewPaymentController(m.paymentService)
+			tt.mockSetup(m)
 
-			req, _ := http.NewRequest(http.MethodGet, "/payments/"+tc.orderID, nil)
+			ctrl := NewPaymentController(m.paymentService)
+
+			r := gin.Default()
+			gin.SetMode(gin.TestMode)
+			group := r.Group("/payment")
+
+			ctrl.RegisterRoutes(group)
+
+			req := httptest.NewRequest(http.MethodPost, "/payment/process", bytes.NewBufferString(tt.payload))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
 
 			r.ServeHTTP(w, req)
 
-			assert.Equal(t, tc.want.status, w.Code)
+			assert.Equal(t, tt.expectedStatus, w.Code)
 		})
 	}
 }

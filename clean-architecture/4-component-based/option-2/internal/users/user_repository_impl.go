@@ -1,16 +1,22 @@
 // implementa repository
 package users
 
+import (
+	"database/sql"
+
+	"github.com/gcarrenho/component-based/option-2/internal/users/model"
+)
+
 type userRepositoryImpl struct {
-	// db is a placeholder for the database connection or ORM instance.
+	DB *sql.DB
 }
 
-func New() *userRepositoryImpl {
+func newUserRepositoryImpl(db *sql.DB) *userRepositoryImpl {
 	return &userRepositoryImpl{
-		// Initialize the database connection or ORM instance here.
+		DB: db,
 	}
 }
 
-func (r *userRepositoryImpl) FindByID(userID string, items []string) error {
-	return nil // This is a placeholder implementation.
+func (r *userRepositoryImpl) GetUserByID(userID string) (model.User, error) {
+	return model.User{}, nil // This is a placeholder implementation.
 }

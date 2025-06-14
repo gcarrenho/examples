@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gcarrenho/component-based/option-1/internal/payments/model"
-	"github.com/gcarrenho/component-based/option-1/mocks"
+	"github.com/gcarrenho/component-based/option-2/internal/payments/mocks"
+	"github.com/gcarrenho/component-based/option-2/internal/payments/model"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"

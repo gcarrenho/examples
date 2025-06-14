@@ -8,19 +8,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Controller struct {
+type PaymentController struct {
 	service payments.PaymentComponent // Interface for payment processing
 }
 
-func NewController(service payments.PaymentComponent) *Controller {
-	return &Controller{service: service}
+func NewPaymentController(service payments.PaymentComponent) *PaymentController {
+	return &PaymentController{service: service}
 }
 
-func (c *Controller) RegisterRoutes(router *gin.RouterGroup) {
+func (c *PaymentController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/process", c.handleProcessPayment)
 }
 
-func (c *Controller) handleProcessPayment(ctx *gin.Context) {
+func (c *PaymentController) handleProcessPayment(ctx *gin.Context) {
 	var req struct {
 		OrderID string  `json:"order_id"`
 		Amount  float64 `json:"amount"`

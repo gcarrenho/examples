@@ -9,10 +9,10 @@ var _ user.PaymentUserService = (*PaymentAdapter)(nil)
 
 // implementa lo que necesita el consumidor de user en este caso es payment
 type PaymentAdapter struct {
-	userService *users.UserComponentImpl
+	userService users.UserComponent
 }
 
-func NewOrderAdapter(userService *users.UserComponentImpl) user.PaymentUserService {
+func NewPaymentAdapter(userService users.UserComponent) user.PaymentUserService {
 	return &PaymentAdapter{
 		userService: userService,
 	}

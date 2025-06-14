@@ -1,6 +1,7 @@
 package orders
 
+import "github.com/gcarrenho/component-based/option-2/internal/orders/model"
+
 type OrderComponent interface {
-	// ProcessPayment processes a payment for a given order ID and amount.
-	FindOrderByID(orderID string) (string, error)
+	FindOrderByID(orderID string) (model.Order, error)
 }

@@ -24,7 +24,7 @@ func Register(router *gin.Engine, container *app.AppContainer) {
 	//private.Use(AuthMiddleware())
 
 	// Payments
-	paymentController := web.NewController(container.PaymentComponent)
+	paymentController := web.NewPaymentController(container.PaymentComponent)
 	paymentController.RegisterRoutes(private.Group("/payments"))
 
 	// Orders

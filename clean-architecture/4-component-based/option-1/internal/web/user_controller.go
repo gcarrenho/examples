@@ -16,7 +16,7 @@ func NewUserController(service users.UserComponent) *UserController {
 }
 
 func (c *UserController) RegisterRoutes(router *gin.RouterGroup) {
-	router.GET("/user/:id", c.getByID)
+	router.GET("/:id", c.getByID)
 }
 
 func (c *UserController) getByID(ctx *gin.Context) {
