@@ -1,0 +1,1 @@
+Theres are two kind of confinaments possible: ad hoc and lexical
