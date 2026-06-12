@@ -14,7 +14,7 @@ type PaymentsRepository struct {
 }
 
 // NewPaymentRepository creates a new instance of PaymentsRepository.
-func NewPaymentsRepository() ports.PaymentsRepository {
+func NewPaymentsRepository() *PaymentsRepository {
 	return &PaymentsRepository{
 		// Initialize any necessary fields or connections here.
 	}

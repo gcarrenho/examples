@@ -17,7 +17,7 @@ type Deps struct {
 	//Mailer MailService // interfaz que envía emails
 }
 
-func NewOrderComponentImpl(deps Deps) OrderComponent {
+func NewOrderComponentImpl(deps Deps) *OrderComponentImpl {
 	repo := newOrderRepositoryImpl(deps.DB)
 	return &OrderComponentImpl{orderRepo: repo}
 

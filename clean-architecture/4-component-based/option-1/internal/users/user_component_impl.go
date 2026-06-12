@@ -16,7 +16,7 @@ type UserComponentImpl struct {
 	repo userRepository
 }
 
-func NewUserComponentImpl(deps Deps) UserComponent {
+func NewUserComponentImpl(deps Deps) *UserComponentImpl {
 	repo := newUserRepositoryImpl(deps.DB)
 	return &UserComponentImpl{repo: repo}
 }

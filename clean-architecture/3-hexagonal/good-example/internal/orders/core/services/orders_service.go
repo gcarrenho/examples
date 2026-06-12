@@ -11,7 +11,7 @@ type OrdersService struct {
 	orderRepo ports.OrdersRepository
 }
 
-func NewOrdersService(orderRepo ports.OrdersRepository) ports.OrdersService {
+func NewOrdersService(orderRepo ports.OrdersRepository) *OrdersService {
 	return &OrdersService{
 		orderRepo: orderRepo,
 	}

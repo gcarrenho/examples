@@ -17,7 +17,7 @@ type Deps struct {
 }
 
 // NewPaymentComponent creates a new instance of PaymentComponent.
-func NewPaymentComponentImpl(deps Deps) PaymentComponent {
+func NewPaymentComponentImpl(deps Deps) *PaymentComponentImpl {
 	repo := newPaymentRepositoryImpl(deps.DB)             // uso interno, no exportado
 	return &PaymentComponentImpl{paymentRepository: repo} //controller: deps.Controller
 
