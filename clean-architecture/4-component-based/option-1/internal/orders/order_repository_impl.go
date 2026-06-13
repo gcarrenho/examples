@@ -12,7 +12,7 @@ type orderRepositoryImpl struct {
 	DB *sql.DB
 }
 
-func newOrderRepositoryImpl(db *sql.DB) orderRepository {
+func newOrderRepositoryImpl(db *sql.DB) *orderRepositoryImpl {
 	return &orderRepositoryImpl{
 		DB: db,
 	}

@@ -12,7 +12,7 @@ type OrderPaymentAdapter struct {
 	paymentService portPaymentSvc.PaymentsService
 }
 
-func NewOrderPayment(paymentService portPaymentSvc.PaymentsService) ports.OrderPaymentChecker {
+func NewOrderPayment(paymentService portPaymentSvc.PaymentsService) *OrderPaymentAdapter {
 	return &OrderPaymentAdapter{
 		paymentService: paymentService,
 	}

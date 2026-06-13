@@ -12,7 +12,7 @@ type OrdersRepository struct {
 }
 
 // NewOrdersRepository creates a new instance of OrdersRepository.
-func NewOrdersRepository() ports.OrdersRepository {
+func NewOrdersRepository() *OrdersRepository {
 	return &OrdersRepository{
 		// Initialize any necessary fields or connections here.
 	}

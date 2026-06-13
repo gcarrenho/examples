@@ -13,7 +13,7 @@ type PaymentsService struct {
 	paymentRepo ports.PaymentsRepository
 }
 
-func NewPaymentsService(paymentRepo ports.PaymentsRepository) ports.PaymentsService {
+func NewPaymentsService(paymentRepo ports.PaymentsRepository) *PaymentsService {
 	return &PaymentsService{
 		paymentRepo: paymentRepo,
 	}

@@ -15,7 +15,7 @@ type FeatureServiceImpl struct {
 	featureRepo ports.FeatureRepository
 }
 
-func NewFeatureService(repo ports.FeatureRepository) ports.FeatureService {
+func NewFeatureService(repo ports.FeatureRepository) *FeatureServiceImpl {
 	return &FeatureServiceImpl{featureRepo: repo}
 }
 
