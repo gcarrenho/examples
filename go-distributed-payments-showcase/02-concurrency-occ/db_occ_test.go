@@ -6,7 +6,21 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
+
+// conflictStore always returns ErrVersionConflict from UpdateOCC.
+// Used to test retry limits and context cancellation without real contention.
+type conflictStore struct{ acc Account }
+
+func (s *conflictStore) GetByID(_ context.Context, _ string) (*Account, error) {
+	a := s.acc
+	return &a, nil
+}
+func (s *conflictStore) UpdateOCC(_ context.Context, _ string, _, _ int64) error {
+	return ErrVersionConflict
+}
+func (s *conflictStore) UpdatePCC(_ context.Context, _ string, _ int64) error { return nil }
 
 // inMemoryStore simulates a PostgreSQL accounts table.
 //
@@ -77,16 +91,24 @@ func TestLedger_ConvergesUnderContention(t *testing.T) {
 		name     string
 		transfer func(*Ledger, context.Context, string, int64) error
 		retries  int
+		opts     []func(*Ledger)
 	}{
-		{"OCC / optimistic", (*Ledger).TransferOCC, 500},
-		{"PCC / pessimistic", (*Ledger).TransferPCC, 1},
+		{name: "OCC / optimistic", transfer: (*Ledger).TransferOCC, retries: 500},
+		{
+			// Same logic as OCC; jitter spreads retries — expect fewer conflicts in the log.
+			name:     "OCC / optimistic + jitter backoff",
+			transfer: (*Ledger).TransferOCC,
+			retries:  500,
+			opts:     []func(*Ledger){WithBackoff(JitteredBackoff(5 * time.Microsecond))},
+		},
+		{name: "PCC / pessimistic", transfer: (*Ledger).TransferPCC, retries: 1},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			store := newStore(Account{ID: "acc-1", Balance: 0, Version: 0})
-			ledger := NewLedger(store, tc.retries)
+			ledger := NewLedger(store, tc.retries, tc.opts...)
 
 			var wg sync.WaitGroup
 			for range goroutines {
@@ -107,6 +129,22 @@ func TestLedger_ConvergesUnderContention(t *testing.T) {
 			t.Logf("%s: %d writes committed, %d OCC conflicts",
 				tc.name, store.acc.Version, store.conflictCount.Load())
 		})
+	}
+}
+
+// TestOCC_ContextCancelledDuringRetry verifies that a cancelled context
+// aborts the retry loop immediately rather than burning through maxRetries.
+func TestOCC_ContextCancelledDuringRetry(t *testing.T) {
+	t.Parallel()
+	store := &conflictStore{acc: Account{ID: "acc-ctx", Balance: 1000, Version: 0}}
+	ledger := NewLedger(store, 10_000) // large budget; context should terminate it first
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // pre-cancel: context is already done on the first retry check
+
+	err := ledger.TransferOCC(ctx, "acc-ctx", -100)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("want context.Canceled, got %v", err)
 	}
 }
 

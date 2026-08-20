@@ -26,6 +26,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
+	"time"
 )
 
 // ErrVersionConflict is returned by UpdateOCC when another writer committed
@@ -55,17 +57,46 @@ type AccountStore interface {
 type Ledger struct {
 	store      AccountStore
 	maxRetries int
+	// backoff returns how long to sleep before the next OCC retry. nil = immediate.
+	backoff func(attempt int) time.Duration
 }
 
 // NewLedger creates a Ledger. maxRetries bounds the OCC retry loop.
-func NewLedger(store AccountStore, maxRetries int) *Ledger {
-	return &Ledger{store: store, maxRetries: maxRetries}
+// Pass WithBackoff(JitteredBackoff(...)) for high-contention production workloads.
+func NewLedger(store AccountStore, maxRetries int, opts ...func(*Ledger)) *Ledger {
+	l := &Ledger{store: store, maxRetries: maxRetries}
+	for _, o := range opts {
+		o(l)
+	}
+	return l
+}
+
+// WithBackoff configures a per-retry sleep function on the Ledger.
+func WithBackoff(fn func(attempt int) time.Duration) func(*Ledger) {
+	return func(l *Ledger) { l.backoff = fn }
+}
+
+// JitteredBackoff returns a random delay uniformly distributed in [0, attempt×base].
+//
+// Without jitter, all goroutines that fail at the same instant retry at the same
+// instant — multiplying conflicts rather than reducing them (thundering herd).
+// Jitter spreads retries across time so each retry round has far fewer collisions.
+func JitteredBackoff(base time.Duration) func(int) time.Duration {
+	return func(attempt int) time.Duration {
+		max := int64(time.Duration(attempt) * base)
+		if max <= 0 {
+			return 0
+		}
+		return time.Duration(rand.Int64N(max))
+	}
 }
 
 // TransferOCC applies delta to an account balance using Optimistic Concurrency Control.
 //
-// The read-modify-write cycle is retried on version conflicts. Under low contention
-// one iteration suffices; under high contention retry overhead grows with goroutine count.
+// The read-modify-write cycle retries on version conflicts. Under low contention one
+// iteration suffices. Under high contention use WithBackoff(JitteredBackoff(...)) to
+// avoid the thundering herd: without jitter 1000 failing goroutines all retry at the
+// same instant, generating as many conflicts as the original burst.
 func (l *Ledger) TransferOCC(ctx context.Context, accountID string, delta int64) error {
 	for attempt := range l.maxRetries {
 		acc, err := l.store.GetByID(ctx, accountID)
@@ -81,7 +112,16 @@ func (l *Ledger) TransferOCC(ctx context.Context, accountID string, delta int64)
 
 		err = l.store.UpdateOCC(ctx, accountID, newBalance, acc.Version)
 		if errors.Is(err, ErrVersionConflict) {
-			continue // lost the race — re-read the latest state and retry
+			// Check context before sleeping — avoid blocking a cancelled request.
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("occ: %w after %d attempt(s)", ctx.Err(), attempt+1)
+			default:
+			}
+			if l.backoff != nil {
+				time.Sleep(l.backoff(attempt + 1))
+			}
+			continue
 		}
 		return err // nil on success, or a hard infrastructure error
 	}
