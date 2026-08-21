@@ -2,36 +2,51 @@ package api
 
 import (
 	"context"
-	"sync"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 
 	banking "github.com/examples/banking-core"
 )
 
-// ResultsStore caches the latest PaymentOrderResult per UETR so GET /payments/{uetr}
-// can answer without querying payment-worker or the ledger directly.
-//
-// Production note: an in-memory map only works for a single payment-api replica.
-// With multiple replicas behind a load balancer, back this with Redis or Postgres
-// so any replica can answer any UETR regardless of which one placed the order.
+// ResultsStore persists the latest PaymentOrderResult per UETR in Redis so
+// GET /payments/{uetr} answers correctly regardless of which payment-api
+// replica handles the request — an in-memory map only works for a single replica.
 type ResultsStore struct {
-	mu   sync.RWMutex
-	data map[string]banking.PaymentOrderResult
+	rdb *redis.Client
+	ttl time.Duration
 }
 
-func NewResultsStore() *ResultsStore {
-	return &ResultsStore{data: make(map[string]banking.PaymentOrderResult)}
+func NewResultsStore(rdb *redis.Client, ttl time.Duration) *ResultsStore {
+	return &ResultsStore{rdb: rdb, ttl: ttl}
 }
 
-// HandleResult satisfies kafka.resultHandler — called for every consumed PaymentOrderResult.
-func (s *ResultsStore) HandleResult(_ context.Context, result banking.PaymentOrderResult) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.data[result.UETR] = result
+func resultKey(uetr string) string { return "payment-result:" + uetr }
+
+// Save persists a result. Used directly by ResultProcessor and TimeoutReaper.
+func (s *ResultsStore) Save(ctx context.Context, result banking.PaymentOrderResult) error {
+	data, err := json.Marshal(result)
+	if err != nil {
+		return fmt.Errorf("results store: marshal: %w", err)
+	}
+	return s.rdb.Set(ctx, resultKey(result.UETR), data, s.ttl).Err()
 }
 
-func (s *ResultsStore) Get(uetr string) (banking.PaymentOrderResult, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	r, ok := s.data[uetr]
-	return r, ok
+// Get returns the result for uetr, or found=false if the worker hasn't published yet.
+func (s *ResultsStore) Get(ctx context.Context, uetr string) (result banking.PaymentOrderResult, found bool, err error) {
+	data, err := s.rdb.Get(ctx, resultKey(uetr)).Bytes()
+	if errors.Is(err, redis.Nil) {
+		return banking.PaymentOrderResult{}, false, nil
+	}
+	if err != nil {
+		return banking.PaymentOrderResult{}, false, fmt.Errorf("results store: get: %w", err)
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return banking.PaymentOrderResult{}, false, fmt.Errorf("results store: unmarshal: %w", err)
+	}
+	return result, true, nil
 }
+

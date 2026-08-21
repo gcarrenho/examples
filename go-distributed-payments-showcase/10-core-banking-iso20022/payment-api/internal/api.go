@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -23,11 +24,15 @@ type publisher interface {
 
 // Handler is the HTTP inbound adapter.
 type Handler struct {
-	pub     publisher
-	results *ResultsStore
+	pub       publisher
+	results   *ResultsStore
+	pending   *PendingIndex
+	callbacks *CallbackStore
 }
 
-func NewHandler(pub publisher, results *ResultsStore) *Handler { return &Handler{pub: pub, results: results} }
+func NewHandler(pub publisher, results *ResultsStore, pending *PendingIndex, callbacks *CallbackStore) *Handler {
+	return &Handler{pub: pub, results: results, pending: pending, callbacks: callbacks}
+}
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// AUTH TODO: this is the client-facing edge (merchant/bank client calls this API
@@ -70,6 +75,9 @@ type InitiateRequest struct {
 	CreditorBIC  string `json:"creditor_bic"`
 	CreditorName string `json:"creditor_name"`
 	Rail         string `json:"rail"` // "SEPA" | "SWIFT"
+	// CallbackURL is optional. If set, payment-api POSTs the final result here
+	// instead of requiring the client to poll GET /payments/{uetr}.
+	CallbackURL string `json:"callback_url,omitempty"`
 }
 
 func (h *Handler) initiate(w http.ResponseWriter, r *http.Request) {
@@ -110,6 +118,16 @@ func (h *Handler) initiate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Track for the timeout reaper and register the optional webhook — best-effort:
+	// a failure here does not block the response, it only means GET /payments/{uetr}
+	// remains the client's only path to the result (no reaper cleanup, no webhook).
+	if err := h.pending.Add(r.Context(), req.UETR); err != nil {
+		slog.Default().ErrorContext(r.Context(), "failed to track pending order", slog.String("uetr", req.UETR), slog.String("err", err.Error()))
+	}
+	if err := h.callbacks.Set(r.Context(), req.UETR, req.CallbackURL); err != nil {
+		slog.Default().ErrorContext(r.Context(), "failed to store callback url", slog.String("uetr", req.UETR), slog.String("err", err.Error()))
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	_ = json.NewEncoder(w).Encode(map[string]string{
@@ -129,7 +147,11 @@ func newID() string {
 // Returns 202/PDNG while the worker hasn't published a result yet.
 func (h *Handler) getStatus(w http.ResponseWriter, r *http.Request) {
 	uetr := r.PathValue("uetr")
-	result, found := h.results.Get(uetr)
+	result, found, err := h.results.Get(r.Context(), uetr)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 	if !found {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)

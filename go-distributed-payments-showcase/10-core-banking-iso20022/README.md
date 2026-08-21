@@ -357,6 +357,45 @@ curl -i http://localhost:8083/payments/550e8400-e29b-41d4-a716-446655440000
 { "uetr": "...", "status": "RJCT", "reason": "banking: insufficient balance for debit" }
 ```
 
+### 4.2. Notificación por webhook (alternativa al polling)
+
+En lugar de hacer polling a `GET /payments/{uetr}`, el cliente puede registrar una URL de callback al momento de iniciar el pago. `payment-api` la invoca automáticamente apenas conoce el resultado final (éxito, rechazo o timeout):
+
+```bash
+curl -i -X POST http://localhost:8083/payments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uetr": "770e8400-e29b-41d4-a716-446655440002",
+    "amount_cents": 150000,
+    "currency": "EUR",
+    "debtor_iban": "DE89370400440532013000",
+    "creditor_iban": "FR7630004000031234567890143",
+    "rail": "SEPA",
+    "callback_url": "https://webhook.site/tu-id-unico"
+  }'
+```
+
+- La URL se guarda en Redis (`CallbackStore`, TTL = 2× el timeout de negocio) junto al `uetr`.
+- Cuando `payment-worker` publica el resultado en `banking.payment.orders.results`, `payment-api` lo consume (`ResultProcessor.HandleResult`), lo persiste, y dispara la notificación en una goroutine separada (no bloquea el consumer de Kafka).
+- `WebhookNotifier` hace **POST** a la URL con `{"uetr": "...", "status": "ACSC|RJCT", "reason": "..."}`, con hasta 3 intentos y backoff lineal (1s, 2s), cada intento con timeout de 5s.
+- Es "best effort": si el webhook falla las 3 veces, el resultado sigue disponible vía `GET /payments/{uetr}` — el cliente nunca pierde la respuesta, solo el aviso proactivo.
+- Si `callback_url` se omite, el flujo sigue siendo puramente por polling (comportamiento anterior, sin cambios).
+
+### 4.3. Timeout de negocio para pagos que nunca resuelven (`TimeoutReaper`)
+
+Si `payment-worker` se cae, un mensaje se pierde, o el rail bancario nunca responde, un pago quedaría en `PDNG` para siempre. `payment-api` corre un `TimeoutReaper` en background que barre periódicamente el índice de pendientes (`PendingIndex`, un ZSET en Redis) y expira automáticamente los que superan el SLA:
+
+- Variable de entorno `PAYMENT_TIMEOUT` (segundos, default `300` = 5 minutos) define el SLA de negocio.
+- El *sweep* corre cada 30 segundos (intervalo fijo en `main.go`, ajustable en el código).
+- Cada `uetr` detectado como "stale" (más viejo que `PAYMENT_TIMEOUT` y aún sin resultado) se marca como `RJCT` con `reason: "timeout: no result received within business SLA"`, se persiste en `ResultsStore`, se remueve de `PendingIndex`, y dispara el webhook si había uno registrado.
+- Esto es una salvaguarda independiente del resultado real del banco — si el resultado legítimo llega después del timeout (mensaje tardío), `payment-worker` ya completó su procesamiento real vía idempotencia; el timeout solo protege al *cliente* de esperar indefinidamente una respuesta que quizás nunca llegue por Kafka.
+
+**Para probar el timeout**: iniciar un pago, matar `payment-worker` (Ctrl+C en la Terminal 2) antes de que procese el evento, y esperar `PAYMENT_TIMEOUT` segundos. `GET /payments/{uetr}` debe pasar de `PDNG` a `RJCT` con el `reason` de timeout, sin que el worker haya hecho nada.
+
+### 4.4. Persistencia (Redis, no en memoria)
+
+`ResultsStore`, `PendingIndex` y `CallbackStore` viven en Redis (mismo `docker-compose.yml`, variable `REDIS_URL` en `payment-api`, default `redis://localhost:6379`) — no en un `map` en memoria. Esto significa que reiniciar `payment-api` no pierde resultados ya conocidos ni pagos pendientes: al reiniciar, el `TimeoutReaper` retoma el barrido con el mismo estado persistido.
+
 ### 5. Probar desde Postman
 
 1. Crear un nuevo request `POST` a `http://localhost:8083/payments`
