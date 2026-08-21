@@ -1,0 +1,63 @@
+version: "3.9"
+
+# Local infrastructure for Case 10 — core banking ISO 20022
+# Redpanda: Kafka-compatible broker, no Zookeeper, starts in ~2 seconds
+# Redis: idempotency store for the payment-worker
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.6
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 512M
+      - --reserve-memory 0M
+      - --node-id 0
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+    ports:
+      - "9092:9092"    # external (host → container)
+      - "29092:29092"  # internal (container → container)
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy: true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Redpanda Console: UI to inspect topics and messages (optional, nice for demos)
+  console:
+    image: docker.redpanda.com/redpandadata/console:v2.4.5
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redpanda
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Create the topic on startup (Redpanda auto-creates but explicit is better)
+  init-topics:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.6
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "rpk topic create banking.payment.orders.initiated \
+        --brokers redpanda:29092 \
+        --partitions 4 \
+        --replicas 1 && \
+      rpk topic create banking.payment.orders.results \
+        --brokers redpanda:29092 \
+        --partitions 4 \
+        --replicas 1"
+    restart: "no"
