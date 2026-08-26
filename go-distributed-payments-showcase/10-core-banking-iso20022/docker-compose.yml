@@ -17,10 +17,11 @@ services:
       - "9092:9092"    # external (host → container)
       - "29092:29092"  # internal (container → container)
     healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health --brokers=localhost:29092 | grep -q 'Healthy: true'"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9644/v1/status/ready > /dev/null"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   # Redpanda Console: UI to inspect topics and messages (optional, nice for demos)
   console:
