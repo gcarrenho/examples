@@ -246,15 +246,15 @@ El `UETR` (Unique End-to-End Transaction Reference) es un UUID que el cliente as
 
 ```bash
 cd 10-core-banking-iso20022
-docker-compose up -d
-docker-compose ps   # esperar que redpanda y redis estén "healthy"
+docker compose up -d
+docker compose ps   # esperar que redpanda y redis estén "healthy"
 ```
 
 Esto levanta:
 - **Redpanda** (compatible con protocolo Kafka) en `localhost:9092`
 - **Redpanda Console** (UI para inspeccionar el topic) en `http://localhost:8080`
 - **Redis** en `localhost:6379`
-- Crea el topic `banking.payment.orders.initiated` automáticamente
+- Crea automáticamente los topics `banking.payment.orders.initiated` y `banking.payment.orders.results`
 
 ### 2. Levantar los dos microservicios
 

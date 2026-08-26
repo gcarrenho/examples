@@ -110,7 +110,7 @@ Los pagos son el dominio donde la **corrección es innegociable**. Un bug en un 
 
 ```bash
 # Levantar la infraestructura (necesaria para tests de integración)
-docker-compose up -d
+docker compose up -d
 
 # Ejecutar todos los tests unitarios (no requieren infraestructura)
 go test ./... -race -count=1 -v

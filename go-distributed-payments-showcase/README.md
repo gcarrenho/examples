@@ -110,7 +110,7 @@ Payments are the domain where **correctness is non-negotiable**. A bug in a soci
 
 ```bash
 # Start infrastructure (required for integration tests)
-docker-compose up -d
+docker compose up -d
 
 # Run all unit tests (no infrastructure required)
 go test ./... -race -count=1 -v
