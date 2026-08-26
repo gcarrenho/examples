@@ -414,3 +414,6 @@ cd banking-core && go test ./... -count=1 -v
 No requiere Docker ni Kafka — usa `gomock` para simular `Rail` y `Ledger`.
 
 
+Pendiente agregar Monitoring y dashboards
+prometheus y grafana
+y pproof para encontrar cuellos de botellas

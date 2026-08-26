@@ -1,5 +1,3 @@
-version: "3.9"
-
 # Local infrastructure for Case 10 — core banking ISO 20022
 # Redpanda: Kafka-compatible broker, no Zookeeper, starts in ~2 seconds
 # Redis: idempotency store for the payment-worker
@@ -19,7 +17,7 @@ services:
       - "9092:9092"    # external (host → container)
       - "29092:29092"  # internal (container → container)
     healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy: true'"]
+      test: ["CMD-SHELL", "rpk cluster health --brokers=localhost:29092 | grep -q 'Healthy: true'"]
       interval: 5s
       timeout: 5s
       retries: 10

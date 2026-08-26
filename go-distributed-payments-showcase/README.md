@@ -2,6 +2,89 @@
 
 # go-distributed-payments-showcase
 
+An educational Go monorepo about the architectural problems behind distributed payment systems: idempotency, concurrency, event delivery, routing, protocol adapters, and bank-payment orchestration. The cases progress from focused patterns to realistic payment-system components.
+
+## Why Payments Are Architecturally Interesting
+
+Payments make correctness non-negotiable. A duplicate request can charge a customer twice; a reordered event can settle a refund before its original payment; a transient network failure can leave a customer waiting forever for an answer. The cases make those failure modes concrete and show the boundaries where each mitigation belongs.
+
+## Cases
+
+| # | Case | Core concept | Main infrastructure / protocol |
+|---|------|--------------|--------------------------------|
+| 01 | [idempotency-distributed](01-idempotency-distributed/) | Redis `SETNX` state machine for duplicate requests | Redis |
+| 02 | [concurrency-occ](02-concurrency-occ/) | Optimistic vs. pessimistic concurrency control | PostgreSQL |
+| 03 | [kafka-ordering](03-kafka-ordering/) | Partition ordering and dead-letter queues | Kafka |
+| 04 | [memory-syncpool](04-memory-syncpool/) | `sync.Pool` and allocation pressure | None |
+| 05 | [sqs-ordering](05-sqs-ordering/) | FIFO groups, deduplication, and redrive | AWS SQS |
+| 06 | [payment-processor](06-payment-processor/) | Component-oriented payment processor | Go components and in-memory adapters |
+| 07 | [microservices](07-microservices/) | HTTP services, consumer-defined contracts, and reservations | HTTP |
+| 08 | [acquirer-gateway](08-acquirer-gateway/) | Acquirer routing, strategies, and circuit breakers | HTTP acquirer adapters |
+| 09 | [psp-card-acquirer](09-psp-card-acquirer/) | BIN routing and card authorizations | ISO 8583, REST |
+| 10 | [core-banking-iso20022](10-core-banking-iso20022/) | Asynchronous bank-payment orchestration | Kafka, Redis, ISO 20022, SWIFT MT103 |
+
+## Repository Layout
+
+Cases 01–09 live in the root Go module. Case 10 deliberately uses three independent modules, coordinated locally by `go.work`:
+
+```text
+go-distributed-payments-showcase/
+├── 01-idempotency-distributed/ ... 09-psp-card-acquirer/
+├── 10-core-banking-iso20022/
+│   ├── banking-core/      # shared payment domain and OCC engine
+│   ├── payment-api/       # HTTP API, result consumer, webhook and timeout reaper
+│   ├── payment-worker/    # idempotent Kafka worker and SEPA/SWIFT adapters
+│   ├── go.work
+│   └── docker-compose.yml # Redpanda and Redis for the case
+├── go.mod
+└── docker-compose.yml
+```
+
+The root module has external dependencies where a case needs a real client or test tool; the examples still avoid application frameworks so the architecture remains visible.
+
+## Running Tests
+
+Run the root-module cases from the repository root:
+
+```bash
+go test ./... -race -count=1
+
+# Case 04 allocation benchmarks
+go test ./04-memory-syncpool/... -bench=. -benchmem -count=3
+go test ./04-memory-syncpool/... -bench=Parallel -benchmem -cpu=1,2,4,8
+```
+
+Run Case 10 from its own modules:
+
+```bash
+cd 10-core-banking-iso20022/banking-core
+go test ./... -count=1
+
+cd ../payment-api
+go build ./...
+
+cd ../payment-worker
+go build ./...
+```
+
+To run the complete Case 10 flow, start its local infrastructure and then follow its dedicated [README](10-core-banking-iso20022/README.md):
+
+```bash
+cd 10-core-banking-iso20022
+docker compose up -d
+```
+
+## Design Principles
+
+1. **Narrow contracts at the consumer boundary**: a consumer declares only the capabilities it needs; adapters absorb protocol variation.
+2. **At-least-once delivery requires idempotency**: Kafka and SQS can redeliver after a crash, so a stable idempotency key must reach the side effect.
+3. **Concurrency and duplicate delivery are different problems**: Redis idempotency protects one event; OCC protects distinct concurrent updates to the same balance.
+4. **Domain events are not HTTP payloads**: validate and translate at the inbound boundary, then publish a stable domain contract.
+5. **Protocol details stay at the edge**: ISO 8583, ISO 20022, MT103, and proprietary acquirer formats belong in dedicated adapters, never in application orchestration.
+> 🌐 [Español](README-es.md)
+
+# go-distributed-payments-showcase
+
 An educational monorepo demonstrating the **hard architectural problems** that arise when building distributed payment systems at scale. Each case study is self-contained, uses only the Go standard library, and is accompanied by concurrent tests that prove the solution works under real-world traffic conditions.
 
 ## Why Payments Are Architecturally Interesting

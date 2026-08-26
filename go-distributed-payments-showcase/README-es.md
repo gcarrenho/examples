@@ -2,6 +2,89 @@
 
 # go-distributed-payments-showcase
 
+Un monorepo educativo en Go sobre los problemas arquitectónicos detrás de los sistemas de pagos distribuidos: idempotencia, concurrencia, entrega de eventos, ruteo, adaptadores de protocolo y orquestación de pagos bancarios. Los casos avanzan desde patrones focalizados hasta componentes realistas de un sistema de pagos.
+
+## Por qué los pagos son arquitectónicamente interesantes
+
+En pagos la corrección es innegociable. Un request duplicado puede cobrar dos veces; un evento reordenado puede liquidar un reembolso antes de su pago original; una falla de red transitoria puede dejar al cliente esperando una respuesta indefinidamente. Los casos hacen concretos esos fallos y muestran dónde corresponde cada mitigación.
+
+## Casos
+
+| # | Caso | Concepto central | Infraestructura / protocolo principal |
+|---|------|------------------|---------------------------------------|
+| 01 | [idempotency-distributed](01-idempotency-distributed/) | Máquina de estados Redis `SETNX` para requests duplicados | Redis |
+| 02 | [concurrency-occ](02-concurrency-occ/) | Control de concurrencia optimista vs. pesimista | PostgreSQL |
+| 03 | [kafka-ordering](03-kafka-ordering/) | Orden por partición y dead-letter queues | Kafka |
+| 04 | [memory-syncpool](04-memory-syncpool/) | `sync.Pool` y presión de asignaciones | Ninguna |
+| 05 | [sqs-ordering](05-sqs-ordering/) | Grupos FIFO, deduplicación y redrive | AWS SQS |
+| 06 | [payment-processor](06-payment-processor/) | Procesador de pagos orientado a componentes | Componentes Go y adaptadores en memoria |
+| 07 | [microservices](07-microservices/) | Servicios HTTP, contratos definidos por el consumidor y reservas | HTTP |
+| 08 | [acquirer-gateway](08-acquirer-gateway/) | Ruteo de adquirentes, strategies y circuit breakers | Adaptadores HTTP de adquirentes |
+| 09 | [psp-card-acquirer](09-psp-card-acquirer/) | Ruteo por BIN y autorizaciones de tarjeta | ISO 8583, REST |
+| 10 | [core-banking-iso20022](10-core-banking-iso20022/) | Orquestación asíncrona de pagos bancarios | Kafka, Redis, ISO 20022, SWIFT MT103 |
+
+## Estructura del repositorio
+
+Los Casos 01–09 viven en el módulo Go raíz. El Caso 10 usa deliberadamente tres módulos independientes, coordinados localmente por `go.work`:
+
+```text
+go-distributed-payments-showcase/
+├── 01-idempotency-distributed/ ... 09-psp-card-acquirer/
+├── 10-core-banking-iso20022/
+│   ├── banking-core/      # dominio compartido de pagos y engine OCC
+│   ├── payment-api/       # API HTTP, consumer de resultados, webhook y timeout reaper
+│   ├── payment-worker/    # worker Kafka idempotente y adaptadores SEPA/SWIFT
+│   ├── go.work
+│   └── docker-compose.yml # Redpanda y Redis para el caso
+├── go.mod
+└── docker-compose.yml
+```
+
+El módulo raíz tiene dependencias externas cuando un caso necesita un cliente real o una herramienta de test; los ejemplos siguen evitando frameworks de aplicación para que la arquitectura sea visible.
+
+## Ejecutar tests
+
+Ejecutar los casos del módulo raíz desde la raíz del repositorio:
+
+```bash
+go test ./... -race -count=1
+
+# Benchmarks de asignaciones del Caso 04
+go test ./04-memory-syncpool/... -bench=. -benchmem -count=3
+go test ./04-memory-syncpool/... -bench=Parallel -benchmem -cpu=1,2,4,8
+```
+
+Ejecutar el Caso 10 desde sus propios módulos:
+
+```bash
+cd 10-core-banking-iso20022/banking-core
+go test ./... -count=1
+
+cd ../payment-api
+go build ./...
+
+cd ../payment-worker
+go build ./...
+```
+
+Para ejecutar el flujo completo del Caso 10, levantar su infraestructura local y seguir su [README](10-core-banking-iso20022/README.md):
+
+```bash
+cd 10-core-banking-iso20022
+docker compose up -d
+```
+
+## Principios de diseño
+
+1. **Contratos estrechos en el límite del consumidor**: un consumidor declara solo las capacidades que necesita; los adaptadores absorben la variación de protocolos.
+2. **La entrega al menos una vez requiere idempotencia**: Kafka y SQS pueden reentregar después de un crash, por lo que una clave idempotente estable debe llegar hasta el efecto lateral.
+3. **Concurrencia y entrega duplicada son problemas distintos**: la idempotencia en Redis protege un evento; OCC protege actualizaciones concurrentes distintas sobre el mismo saldo.
+4. **Los eventos de dominio no son payloads HTTP**: validar y traducir en el borde de entrada, y después publicar un contrato de dominio estable.
+5. **Los detalles de protocolo quedan en el borde**: ISO 8583, ISO 20022, MT103 y formatos propietarios de adquirentes viven en adaptadores dedicados, nunca en la orquestación de la aplicación.
+> 🌐 [English](README.md)
+
+# go-distributed-payments-showcase
+
 Un monorepo educativo que demuestra los **problemas arquitectónicos más difíciles** que surgen al construir sistemas de pagos distribuidos a escala. Cada caso de estudio es autocontenido, usa únicamente la librería estándar de Go y viene acompañado de tests concurrentes que prueban científicamente que la solución funciona bajo condiciones de tráfico real.
 
 ## Por Qué los Pagos Son Arquitectónicamente Interesantes
