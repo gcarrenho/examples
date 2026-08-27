@@ -15,6 +15,7 @@ import (
 
 	banking "github.com/examples/banking-core"
 	worker "github.com/examples/payment-worker/internal"
+	"github.com/examples/payment-worker/internal/fake"
 	kafkaadapter "github.com/examples/payment-worker/internal/kafka"
 	"github.com/examples/payment-worker/internal/redisstore"
 	"github.com/examples/payment-worker/internal/sepa"
@@ -35,7 +36,8 @@ func main() {
 	sepaRail := sepa.New(env("EBA_URL", "https://step2.ebaclearing.eu"), "TESTBIC1", http.DefaultClient)
 	swiftRail := swift.New(env("SWIFT_URL", "https://api.swift.com"), "TESTBIC1", http.DefaultClient)
 	engine := banking.New(sepaRail, swiftRail, &noopLedger{},
-		banking.WithBackoff(banking.JitteredBackoff(5*time.Millisecond)))
+		banking.WithBackoff(banking.JitteredBackoff(5*time.Millisecond)),
+		banking.WithRail(banking.RailFake, fake.New(100*time.Millisecond, logger)))
 
 	resultsProducer, err := kafkaadapter.NewResultsProducer(brokers)
 	if err != nil {

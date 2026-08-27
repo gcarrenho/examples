@@ -53,6 +53,7 @@ type RailName string
 const (
 	RailSEPA  RailName = "SEPA"
 	RailSWIFT RailName = "SWIFT"
+	RailFake   RailName = "FAKE"
 )
 
 var (
@@ -112,6 +113,12 @@ func New(sepaRail, swiftRail Rail, ledger Ledger, opts ...func(*Engine)) *Engine
 
 func WithBackoff(fn func(attempt int) time.Duration) func(*Engine) {
 	return func(e *Engine) { e.backoff = fn }
+}
+
+// WithRail registers an additional rail adapter without changing the engine's
+// constructor contract. It is useful for new production rails and test rails.
+func WithRail(name RailName, rail Rail) func(*Engine) {
+	return func(e *Engine) { e.rails[name] = rail }
 }
 
 // JitteredBackoff spreads OCC retries across time — prevents thundering herd

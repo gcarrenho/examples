@@ -74,7 +74,7 @@ type InitiateRequest struct {
 	CreditorIBAN string `json:"creditor_iban"`
 	CreditorBIC  string `json:"creditor_bic"`
 	CreditorName string `json:"creditor_name"`
-	Rail         string `json:"rail"` // "SEPA" | "SWIFT"
+	Rail         string `json:"rail"` // "SEPA" | "SWIFT" | "FAKE" (test rail)
 	// CallbackURL is optional. If set, payment-api POSTs the final result here
 	// instead of requiring the client to poll GET /payments/{uetr}.
 	CallbackURL string `json:"callback_url,omitempty"`
