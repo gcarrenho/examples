@@ -49,4 +49,3 @@ func (s *ResultsStore) Get(ctx context.Context, uetr string) (result banking.Pay
 	}
 	return result, true, nil
 }
-

@@ -11,7 +11,7 @@ import (
 // Both services define this struct independently — the JSON wire format is the contract,
 // not the Go type. This mirrors how orders-svc and payment-svc share no Go code.
 type PaymentOrderInitiated struct {
-	EventID    string       // UETR reused as event idempotency key
+	EventID    string // UETR reused as event idempotency key
 	OccurredAt time.Time
 	Order      PaymentOrder
 }
@@ -55,4 +55,3 @@ func DecodeResult(data []byte) (PaymentOrderResult, error) {
 type ResultPublisher interface {
 	PublishResult(ctx context.Context, result PaymentOrderResult) error
 }
-

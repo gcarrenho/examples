@@ -59,12 +59,12 @@ func (r *Rail) buildPacs008(order banking.PaymentOrder) iso20022.CreditTransfer 
 		TxInf: []iso20022.CreditTxInfo{{
 			PmtId:          iso20022.PaymentID{InstrId: order.InstrID, EndToEndId: order.EndToEndID, UETR: order.UETR},
 			IntrBkSttlmAmt: iso20022.Amount{Value: amtStr, Currency: order.Amount.Currency},
-			DbtrAgt:  iso20022.Agent{FinInstnId: iso20022.FinancialInstitutionID{BICFI: order.Debtor.BIC}},
-			Dbtr:     iso20022.Party{Nm: order.Debtor.Name},
-			DbtrAcct: iso20022.Account{Id: iso20022.AccountID{IBAN: order.Debtor.IBAN}},
-			CdtrAgt:  iso20022.Agent{FinInstnId: iso20022.FinancialInstitutionID{BICFI: order.Creditor.BIC}},
-			Cdtr:     iso20022.Party{Nm: order.Creditor.Name},
-			CdtrAcct: iso20022.Account{Id: iso20022.AccountID{IBAN: order.Creditor.IBAN}},
+			DbtrAgt:        iso20022.Agent{FinInstnId: iso20022.FinancialInstitutionID{BICFI: order.Debtor.BIC}},
+			Dbtr:           iso20022.Party{Nm: order.Debtor.Name},
+			DbtrAcct:       iso20022.Account{Id: iso20022.AccountID{IBAN: order.Debtor.IBAN}},
+			CdtrAgt:        iso20022.Agent{FinInstnId: iso20022.FinancialInstitutionID{BICFI: order.Creditor.BIC}},
+			Cdtr:           iso20022.Party{Nm: order.Creditor.Name},
+			CdtrAcct:       iso20022.Account{Id: iso20022.AccountID{IBAN: order.Creditor.IBAN}},
 		}},
 	}
 }

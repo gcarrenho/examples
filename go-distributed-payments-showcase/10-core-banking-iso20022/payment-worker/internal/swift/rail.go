@@ -15,7 +15,7 @@ import (
 type MT103 struct {
 	F20_SenderRef, F23B_BankOpCode, F32A_ValueDate string
 	F50K_Ordering, F57A_BeneBank, F59_Beneficiary  string
-	F70_Remittance, F71A_Charges, F121_UETR         string
+	F70_Remittance, F71A_Charges, F121_UETR        string
 }
 
 func (m MT103) Render() string {

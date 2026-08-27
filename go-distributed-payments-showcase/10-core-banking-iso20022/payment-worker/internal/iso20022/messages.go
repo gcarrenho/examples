@@ -4,14 +4,16 @@
 // Messages are XML documents sent over HTTPS (SWIFT gpi / EBA RT1) or SFTP (batch).
 //
 // Message naming convention: aaaa.bbb.ccc.dd
-//   aaaa = business area (pacs=payments clearing, pain=payment initiation, camt=cash management)
-//   bbb  = message type number
-//   ccc  = namespace version (always 001)
-//   dd   = message version
+//
+//	aaaa = business area (pacs=payments clearing, pain=payment initiation, camt=cash management)
+//	bbb  = message type number
+//	ccc  = namespace version (always 001)
+//	dd   = message version
 //
 // This package implements:
-//   pacs.008.001.08 — FIToFI Customer Credit Transfer (used for SEPA CT and SWIFT)
-//   pacs.002.001.10 — FIToFI Payment Status Report
+//
+//	pacs.008.001.08 — FIToFI Customer Credit Transfer (used for SEPA CT and SWIFT)
+//	pacs.002.001.10 — FIToFI Payment Status Report
 package iso20022
 
 import (
@@ -31,18 +33,18 @@ const (
 
 // CreditTransfer is a pacs.008 message — the standard SEPA/SWIFT wire transfer message.
 type CreditTransfer struct {
-	XMLName xml.Name        `xml:"Document"`
-	XMLNS   string          `xml:"xmlns,attr"`
-	GrpHdr  GroupHeader     `xml:"FIToFICstmrCdtTrf>GrpHdr"`
-	TxInf   []CreditTxInfo  `xml:"FIToFICstmrCdtTrf>CdtTrfTxInf"`
+	XMLName xml.Name       `xml:"Document"`
+	XMLNS   string         `xml:"xmlns,attr"`
+	GrpHdr  GroupHeader    `xml:"FIToFICstmrCdtTrf>GrpHdr"`
+	TxInf   []CreditTxInfo `xml:"FIToFICstmrCdtTrf>CdtTrfTxInf"`
 }
 
 // GroupHeader contains message-level information.
 type GroupHeader struct {
-	MsgId       string    `xml:"MsgId"`              // unique message ID, max 35 chars
-	CreDtTm     time.Time `xml:"CreDtTm"`            // ISO 8601 creation timestamp
-	NbOfTxs     string    `xml:"NbOfTxs"`            // number of transactions in this message
-	SttlmInf    SttlmInf  `xml:"SttlmInf"`
+	MsgId    string    `xml:"MsgId"`   // unique message ID, max 35 chars
+	CreDtTm  time.Time `xml:"CreDtTm"` // ISO 8601 creation timestamp
+	NbOfTxs  string    `xml:"NbOfTxs"` // number of transactions in this message
+	SttlmInf SttlmInf  `xml:"SttlmInf"`
 }
 
 // SttlmInf describes how interbank settlement occurs.
@@ -54,15 +56,15 @@ type SttlmInf struct {
 
 // CreditTxInfo contains per-transaction information.
 type CreditTxInfo struct {
-	PmtId       PaymentID   `xml:"PmtId"`
-	IntrBkSttlmAmt Amount   `xml:"IntrBkSttlmAmt"`     // interbank settlement amount
-	ChrgsInf    ChargesInfo `xml:"ChrgsInf,omitempty"`
-	DbtrAgt     Agent       `xml:"DbtrAgt"`             // debtor's bank (sending bank)
-	Dbtr        Party       `xml:"Dbtr"`                // payer
-	DbtrAcct    Account     `xml:"DbtrAcct"`
-	CdtrAgt     Agent       `xml:"CdtrAgt"`             // creditor's bank (receiving bank)
-	Cdtr        Party       `xml:"Cdtr"`                // payee
-	CdtrAcct    Account     `xml:"CdtrAcct"`
+	PmtId          PaymentID   `xml:"PmtId"`
+	IntrBkSttlmAmt Amount      `xml:"IntrBkSttlmAmt"` // interbank settlement amount
+	ChrgsInf       ChargesInfo `xml:"ChrgsInf,omitempty"`
+	DbtrAgt        Agent       `xml:"DbtrAgt"` // debtor's bank (sending bank)
+	Dbtr           Party       `xml:"Dbtr"`    // payer
+	DbtrAcct       Account     `xml:"DbtrAcct"`
+	CdtrAgt        Agent       `xml:"CdtrAgt"` // creditor's bank (receiving bank)
+	Cdtr           Party       `xml:"Cdtr"`    // payee
+	CdtrAcct       Account     `xml:"CdtrAcct"`
 }
 
 // PaymentID is the triple of identifiers that trace a payment end-to-end.
@@ -103,8 +105,8 @@ type AccountID struct {
 
 // ChargesInfo specifies who bears the transfer charges.
 type ChargesInfo struct {
-	Amt  Amount `xml:"Amt"`
-	Agt  Agent  `xml:"Agt"`
+	Amt Amount `xml:"Amt"`
+	Agt Agent  `xml:"Agt"`
 }
 
 // ── pacs.002.001.10 — FIToFI Payment Status Report ───────────────────────────
@@ -112,10 +114,10 @@ type ChargesInfo struct {
 
 // StatusReport is a pacs.002 message — response to a pacs.008 Credit Transfer.
 type StatusReport struct {
-	XMLName xml.Name        `xml:"Document"`
-	XMLNS   string          `xml:"xmlns,attr"`
-	GrpHdr  StatusGrpHdr    `xml:"FIToFIPmtStsRpt>GrpHdr"`
-	TxInfAndSts []TxStatus  `xml:"FIToFIPmtStsRpt>TxInfAndSts"`
+	XMLName     xml.Name     `xml:"Document"`
+	XMLNS       string       `xml:"xmlns,attr"`
+	GrpHdr      StatusGrpHdr `xml:"FIToFIPmtStsRpt>GrpHdr"`
+	TxInfAndSts []TxStatus   `xml:"FIToFIPmtStsRpt>TxInfAndSts"`
 }
 
 type StatusGrpHdr struct {
@@ -125,10 +127,10 @@ type StatusGrpHdr struct {
 
 // TxStatus contains the status of a specific transaction from the original pacs.008.
 type TxStatus struct {
-	OrgnlInstrId    string     `xml:"OrgnlInstrId"`    // matches pacs.008 InstrId
-	OrgnlEndToEndId string     `xml:"OrgnlEndToEndId"` // matches pacs.008 EndToEndId
-	OrgnlUETR       string     `xml:"OrgnlUETR"`       // matches pacs.008 UETR
-	TxSts           StatusCode `xml:"TxSts"`           // the outcome
+	OrgnlInstrId    string      `xml:"OrgnlInstrId"`        // matches pacs.008 InstrId
+	OrgnlEndToEndId string      `xml:"OrgnlEndToEndId"`     // matches pacs.008 EndToEndId
+	OrgnlUETR       string      `xml:"OrgnlUETR"`           // matches pacs.008 UETR
+	TxSts           StatusCode  `xml:"TxSts"`               // the outcome
 	StsRsnInf       *ReasonInfo `xml:"StsRsnInf,omitempty"` // present on RJCT
 }
 

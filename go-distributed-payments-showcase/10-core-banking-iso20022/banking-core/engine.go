@@ -15,9 +15,9 @@ import (
 
 type PaymentOrder struct {
 	ID         string
-	UETR       string        // Unique End-to-End Transaction Reference (UUID, SWIFT gpi mandatory)
-	InstrID    string        // max 16 chars — assigned by sending bank
-	EndToEndID string        // passed through unchanged by all intermediaries
+	UETR       string // Unique End-to-End Transaction Reference (UUID, SWIFT gpi mandatory)
+	InstrID    string // max 16 chars — assigned by sending bank
+	EndToEndID string // passed through unchanged by all intermediaries
 	Status     PaymentStatus
 	Amount     Money
 	Debtor     Party
@@ -53,7 +53,7 @@ type RailName string
 const (
 	RailSEPA  RailName = "SEPA"
 	RailSWIFT RailName = "SWIFT"
-	RailFake   RailName = "FAKE"
+	RailFake  RailName = "FAKE"
 )
 
 var (
