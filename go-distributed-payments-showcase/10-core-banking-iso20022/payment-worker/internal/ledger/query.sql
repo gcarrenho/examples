@@ -1,0 +1,4 @@
+-- Superseded: queries are now split by bounded context in queries/.
+-- accounts.sql      → UpsertAccount, GetAccount, DebitAccount, GetAccountForConflict, RestoreBalance
+-- payment_debits.sql → InsertDebit, SettleDebit, ReverseDebit
+-- sqlc.yaml now points to queries/ instead of this file.

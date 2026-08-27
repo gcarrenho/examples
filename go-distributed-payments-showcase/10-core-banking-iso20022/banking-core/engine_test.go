@@ -31,7 +31,7 @@ func TestEngine_Initiate_SEPASettled(t *testing.T) {
 	// Exact sequence: GetBalance → Debit → SEPA.Send → Settle. swift.Send must never be called.
 	gomock.InOrder(
 		ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(0), nil),
-		ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(nil),
+		ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(nil),
 		sepa.EXPECT().Send(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, o PaymentOrder) (PaymentOrder, error) {
 			o.Status = StatusSettled
 			return o, nil
@@ -58,7 +58,7 @@ func TestEngine_Initiate_Rejected(t *testing.T) {
 
 	gomock.InOrder(
 		ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(0), nil),
-		ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(nil),
+		ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(nil),
 		sepa.EXPECT().Send(ctx, gomock.Any()).Return(PaymentOrder{}, ErrRejectedByBank),
 		ledger.EXPECT().Reverse(ctx, order.ID).Return(nil), // funds released; Settle must NOT be called
 	)
@@ -95,7 +95,7 @@ func TestEngine_Initiate_RailError(t *testing.T) {
 
 	gomock.InOrder(
 		ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(0), nil),
-		ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(nil),
+		ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(nil),
 		sepa.EXPECT().Send(ctx, gomock.Any()).Return(PaymentOrder{}, ErrRailUnavailable),
 		ledger.EXPECT().Reverse(ctx, order.ID).Return(nil),
 	)
@@ -117,9 +117,9 @@ func TestEngine_Initiate_OCCRetry(t *testing.T) {
 
 	gomock.InOrder(
 		ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(0), nil),
-		ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(ErrVersionConflict),
+		ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(ErrVersionConflict),
 		ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(1), nil),
-		ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(1)).Return(nil),
+		ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(1)).Return(nil),
 		sepa.EXPECT().Send(ctx, gomock.Any()).Return(order, nil),
 	)
 
@@ -139,7 +139,7 @@ func TestEngine_Initiate_OCCRetryExhausted(t *testing.T) {
 
 	// GetBalance + Debit called exactly maxOCCRetries times, always conflicting
 	ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(0), nil).Times(maxOCCRetries)
-	ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(ErrVersionConflict).Times(maxOCCRetries)
+	ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(ErrVersionConflict).Times(maxOCCRetries)
 
 	if _, err := New(sepa, swift, ledger).Initiate(ctx, order); !errors.Is(err, ErrRetryExhausted) {
 		t.Errorf("want ErrRetryExhausted, got %v", err)
@@ -158,9 +158,9 @@ func TestEngine_WithBackoff_JitteredBackoff(t *testing.T) {
 
 	gomock.InOrder(
 		ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(0), nil),
-		ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(ErrVersionConflict),
+		ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(ErrVersionConflict),
 		ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(1), nil),
-		ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(1)).Return(nil),
+		ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(1)).Return(nil),
 		sepa.EXPECT().Send(ctx, gomock.Any()).Return(order, nil),
 	)
 
@@ -201,7 +201,7 @@ func TestEngine_DebitWithOCC_ContextCancelled(t *testing.T) {
 	order := sampleOrder()
 
 	ledger.EXPECT().GetBalance(ctx, order.Debtor.IBAN).Return(int64(1_000_000), int64(0), nil)
-	ledger.EXPECT().Debit(ctx, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(ErrVersionConflict)
+	ledger.EXPECT().Debit(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents, int64(0)).Return(ErrVersionConflict)
 	// No further GetBalance/Debit calls — ctx.Done() short-circuits the retry loop
 
 	engine := New(sepa, swift, ledger, WithBackoff(JitteredBackoff(time.Hour))) // huge backoff to prove we never sleep

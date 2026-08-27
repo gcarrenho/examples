@@ -79,7 +79,8 @@ type Rail interface {
 type Ledger interface {
 	GetBalance(ctx context.Context, iban string) (balanceCents, version int64, err error)
 	// Debit applies OCC: returns ErrVersionConflict if version is stale.
-	Debit(ctx context.Context, iban string, amountCents, expectedVersion int64) error
+	// orderID is recorded in the journal so Settle/Reverse can reference it.
+	Debit(ctx context.Context, orderID, iban string, amountCents, expectedVersion int64) error
 	Settle(ctx context.Context, orderID string) error
 	Reverse(ctx context.Context, orderID string) error
 }
@@ -139,7 +140,7 @@ func (e *Engine) Initiate(ctx context.Context, order PaymentOrder) (PaymentOrder
 	order.Status = StatusInitiated
 	order.CreatedAt = time.Now().UTC()
 
-	if err := e.debitWithOCC(ctx, order.Debtor.IBAN, order.Amount.AmountCents); err != nil {
+	if err := e.debitWithOCC(ctx, order.ID, order.Debtor.IBAN, order.Amount.AmountCents); err != nil {
 		return PaymentOrder{}, fmt.Errorf("ledger debit: %w", err)
 	}
 
@@ -166,7 +167,7 @@ func (e *Engine) Initiate(ctx context.Context, order PaymentOrder) (PaymentOrder
 	return sent, nil
 }
 
-func (e *Engine) debitWithOCC(ctx context.Context, iban string, amountCents int64) error {
+func (e *Engine) debitWithOCC(ctx context.Context, orderID, iban string, amountCents int64) error {
 	for attempt := range maxOCCRetries {
 		balance, version, err := e.ledger.GetBalance(ctx, iban)
 		if err != nil {
@@ -175,7 +176,7 @@ func (e *Engine) debitWithOCC(ctx context.Context, iban string, amountCents int6
 		if balance < amountCents {
 			return ErrInsufficientBalance
 		}
-		err = e.ledger.Debit(ctx, iban, amountCents, version)
+		err = e.ledger.Debit(ctx, orderID, iban, amountCents, version)
 		if errors.Is(err, ErrVersionConflict) {
 			select {
 			case <-ctx.Done():

@@ -123,7 +123,7 @@ Redis evita que **el mismo evento** se procese dos veces. Pero si dos órdenes *
 // banking-core/engine.go
 type Ledger interface {
     GetBalance(ctx, iban) (balanceCents, version int64, err error)
-    Debit(ctx, iban, amountCents, expectedVersion int64) error // ErrVersionConflict si version quedó obsoleta
+    Debit(ctx, orderID, iban string, amountCents, expectedVersion int64) error // ErrVersionConflict si version obsoleta
     Settle(ctx, orderID) error
     Reverse(ctx, orderID) error
 }
@@ -137,6 +137,53 @@ type Ledger interface {
 |---|---|
 | Redis (idempotencia) | Procesar el mismo evento dos veces (redelivery de Kafka) |
 | OCC + JitteredBackoff | Dos eventos *distintos* pisándose el balance de la misma cuenta |
+
+### 3.1. El ledger es PostgreSQL real — sqlc + golang-migrate
+
+El `Ledger` ya no es un `noopLedger`. `payment-worker/internal/ledger/` contiene un adaptador Postgres real:
+
+```
+ledger/
+├── sqlc.yaml               ← config del generador (schema → schema.sql, queries → queries/)
+├── schema.sql              ← snapshot estático para inferencia de tipos en sqlc
+├── migrations/             ← historial versionado ejecutado por golang-migrate al arrancar
+│   ├── 000001_init.up.sql
+│   └── 000001_init.down.sql
+├── queries/                ← una por bounded context; agregar un archivo = agregar dominio
+│   ├── accounts.sql
+│   └── payment_debits.sql
+├── db.go / models.go / query.sql.go   ← generados por sqlc (no editar a mano)
+└── store.go                ← orquestación: transacciones OCC, embed migrations, migrate.Up()
+```
+
+**Por qué sqlc**: en lugar de construir strings SQL a mano, `sqlc generate` lee `queries/` y produce métodos Go tipados. Un error de tipeo en el SQL falla en compile-time, no en runtime.
+
+**Por qué golang-migrate embebido**: `store.go` embebe el directorio `migrations/` en el binario y llama `migrate.Up()` en `NewStore`. El worker aplica migraciones pendientes automáticamente al arrancar — sin scripts de base de datos separados ni tooling externo en el deploy.
+
+```go
+//go:embed migrations/*.sql
+var migrationFS embed.FS
+
+func NewStore(connString string) (*Store, error) {
+    runMigrations(connString) // aplica todas las *.up.sql pendientes
+    pool, _ := pgxpool.New(ctx, connString)
+    return &Store{db: pool, q: New(pool)}, nil
+}
+```
+
+**Para agregar un campo mañana**: crear `migrations/000002_add_settled_at.up.sql` + `.down.sql`, actualizar `schema.sql`, agregar la query en `queries/accounts.sql`, y regenerar con `go generate ./internal/ledger/...`. El worker lo aplica solo al próximo arranque.
+
+### 3.2. El rail FAKE — reproducir fallos transitorios sin infraestructura bancaria
+
+SEPA y SWIFT requieren URLs externas. Para desarrollar y demostrar el flujo de retry sin depender de mocks ni stubs externos, el rail `FAKE` está siempre registrado en el engine:
+
+```go
+banking.WithRail(banking.RailFake, fake.New(100*time.Millisecond, logger))
+```
+
+`fake.Rail.Send` falla intencionalmente en el **primer intento** (`ErrRailUnavailable`) y acepta en el **segundo**. Esto ejercita el comportamiento del engine cuando el rail devuelve un error transitorio — el engine hace `Reverse` en el ledger ante el primer fallo, luego `Debit` + `Settle` en el segundo intento exitoso. Todo visible en los logs del worker.
+
+El rail se activa simplemente usando `"rail": "FAKE"` en la request — no hace falta ninguna variable de entorno.
 
 ### 4. Arquitectura Multi-Módulo Go — repos independientes de verdad
 
@@ -251,10 +298,13 @@ docker compose ps   # esperar que redpanda y redis estén "healthy"
 ```
 
 Esto levanta:
+- **PostgreSQL 16** en `localhost:5432` (db: `payments`, user: `payments`, password: `payments`)
 - **Redpanda** (compatible con protocolo Kafka) en `localhost:9092`
 - **Redpanda Console** (UI para inspeccionar el topic) en `http://localhost:8080`
 - **Redis** en `localhost:6379`
 - Crea automáticamente los topics `banking.payment.orders.initiated` y `banking.payment.orders.results`
+
+> El schema de Postgres (`accounts`, `payment_debits`) se aplica automáticamente al arrancar `payment-worker` vía golang-migrate embebido — no hace falta ejecutar SQL manualmente.
 
 ### 2. Levantar los dos microservicios
 
@@ -264,10 +314,14 @@ cd payment-api
 KAFKA_BROKERS=localhost:9092 go run ./cmd
 # → "payment-api listening addr=:8083 brokers=[localhost:9092]"
 
-# Terminal 2 — payment-worker (Kafka consumer → OCC ledger → SEPA/SWIFT)
+# Terminal 2 — payment-worker (Kafka consumer → OCC ledger → SEPA/SWIFT/FAKE)
 cd payment-worker
-KAFKA_BROKERS=localhost:9092 REDIS_URL=redis://localhost:6379 go run ./cmd
+KAFKA_BROKERS=localhost:9092 \
+  REDIS_URL=redis://localhost:6379 \
+  POSTGRES_URL=postgres://payments:payments@localhost:5432/payments \
+  go run ./cmd
 # → "payment-worker consuming from Kafka [localhost:9092]"
+# Al arrancar aplica automáticamente las migraciones Postgres pendientes.
 ```
 
 Dejá ambas terminales abiertas — vas a ver los logs de cada request ahí (útil para confirmar que el worker efectivamente consumió el evento).
@@ -318,6 +372,54 @@ curl -i -X POST http://localhost:8083/payments \
 
 ```json
 { "uetr": "550e8400-e29b-41d4-a716-446655440000", "status": "PDNG" }
+```
+
+**Rail FAKE** (reproduce fallo transitorio + retry sin infraestructura bancaria):
+
+```bash
+curl -i -X POST http://localhost:8083/payments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uetr": "880e8400-e29b-41d4-a716-446655440003",
+    "end_to_end_id": "E2E003",
+    "amount_cents": 100000,
+    "currency": "EUR",
+    "debtor_iban": "DE89370400440532013000",
+    "debtor_bic": "DEUTDEDB",
+    "debtor_name": "Alice Müller",
+    "creditor_iban": "FR7630004000031234567890143",
+    "creditor_bic": "BNPAFRPP",
+    "creditor_name": "Bob Jones",
+    "rail": "FAKE"
+  }'
+```
+
+En los logs del worker (Terminal 2) deberías ver exactamente:
+
+```
+WARN  fake rail transient failure; retrying  uetr=880e8400-... attempt=1
+INFO  fake rail accepted payment             uetr=880e8400-... attempt=2
+```
+
+El primer intento hace `Debit` OCC en Postgres y luego `Reverse` (porque el rail falla).
+El segundo hace `Debit` + `Settle` — el balance queda reducido y la orden en `SETTLED`.
+Consultar el resultado:
+
+```bash
+curl -i http://localhost:8083/payments/880e8400-e29b-41d4-a716-446655440003
+# → { "uetr": "880e8400-...", "status": "ACSC", "reason": "" }
+```
+
+Verificar el ledger en Postgres:
+
+```bash
+docker compose exec postgres psql -U payments -d payments -c \
+  "SELECT iban, balance_cents, version FROM accounts;"
+# balance_cents disminuyó 100000 (1 EUR = 100 cents × 1000) y version = 1
+
+docker compose exec postgres psql -U payments -d payments -c \
+  "SELECT order_id, status FROM payment_debits;"
+# status = SETTLED
 ```
 
 ### 4. Verificar que el worker procesó el evento
@@ -414,6 +516,3 @@ cd banking-core && go test ./... -count=1 -v
 No requiere Docker ni Kafka — usa `gomock` para simular `Rail` y `Ledger`.
 
 
-Pendiente agregar Monitoring y dashboards
-prometheus y grafana
-y pproof para encontrar cuellos de botellas

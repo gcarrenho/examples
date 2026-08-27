@@ -1,8 +1,24 @@
 # Local infrastructure for Case 10 — core banking ISO 20022
-# Redpanda: Kafka-compatible broker, no Zookeeper, starts in ~2 seconds
-# Redis: idempotency store for the payment-worker
+# Redpanda: Kafka-compatible broker
+# Redis:    idempotency + result cache + pending index + callback URLs
+# Postgres: double-entry ledger (accounts, payment_debits)
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: payments
+      POSTGRES_USER: payments
+      POSTGRES_PASSWORD: payments
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payments -d payments"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:v23.3.6
     command:

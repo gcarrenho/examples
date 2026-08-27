@@ -80,17 +80,17 @@ func (m *MockLedger) EXPECT() *MockLedgerMockRecorder {
 }
 
 // Debit mocks base method.
-func (m *MockLedger) Debit(ctx context.Context, iban string, amountCents, expectedVersion int64) error {
+func (m *MockLedger) Debit(ctx context.Context, orderID, iban string, amountCents, expectedVersion int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Debit", ctx, iban, amountCents, expectedVersion)
+	ret := m.ctrl.Call(m, "Debit", ctx, orderID, iban, amountCents, expectedVersion)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Debit indicates an expected call of Debit.
-func (mr *MockLedgerMockRecorder) Debit(ctx, iban, amountCents, expectedVersion any) *gomock.Call {
+func (mr *MockLedgerMockRecorder) Debit(ctx, orderID, iban, amountCents, expectedVersion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debit", reflect.TypeOf((*MockLedger)(nil).Debit), ctx, iban, amountCents, expectedVersion)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debit", reflect.TypeOf((*MockLedger)(nil).Debit), ctx, orderID, iban, amountCents, expectedVersion)
 }
 
 // GetBalance mocks base method.

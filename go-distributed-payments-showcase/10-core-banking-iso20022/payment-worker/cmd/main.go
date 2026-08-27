@@ -17,6 +17,7 @@ import (
 	worker "github.com/examples/payment-worker/internal"
 	"github.com/examples/payment-worker/internal/fake"
 	kafkaadapter "github.com/examples/payment-worker/internal/kafka"
+	"github.com/examples/payment-worker/internal/ledger"
 	"github.com/examples/payment-worker/internal/redisstore"
 	"github.com/examples/payment-worker/internal/sepa"
 	"github.com/examples/payment-worker/internal/swift"
@@ -25,6 +26,7 @@ import (
 func main() {
 	brokers := strings.Split(env("KAFKA_BROKERS", "localhost:9092"), ",")
 	redisURL := env("REDIS_URL", "redis://localhost:6379")
+	pgURL := env("POSTGRES_URL", "postgres://payments:payments@localhost:5432/payments")
 	logger := slog.Default()
 
 	ropt, err := redis.ParseURL(redisURL)
@@ -33,9 +35,15 @@ func main() {
 	}
 	idemStore := redisstore.New(redis.NewClient(ropt), 48*time.Hour)
 
+	ledgerStore, err := ledger.NewStore(pgURL)
+	if err != nil {
+		log.Fatalf("ledger: %v", err)
+	}
+	defer ledgerStore.Close()
+
 	sepaRail := sepa.New(env("EBA_URL", "https://step2.ebaclearing.eu"), "TESTBIC1", http.DefaultClient)
 	swiftRail := swift.New(env("SWIFT_URL", "https://api.swift.com"), "TESTBIC1", http.DefaultClient)
-	engine := banking.New(sepaRail, swiftRail, &noopLedger{},
+	engine := banking.New(sepaRail, swiftRail, ledgerStore,
 		banking.WithBackoff(banking.JitteredBackoff(5*time.Millisecond)),
 		banking.WithRail(banking.RailFake, fake.New(100*time.Millisecond, logger)))
 
@@ -59,15 +67,6 @@ func main() {
 	consumer.Run(ctx)
 	log.Println("payment-worker stopped")
 }
-
-type noopLedger struct{}
-
-func (l *noopLedger) GetBalance(_ context.Context, _ string) (int64, int64, error) {
-	return 1_000_000, 0, nil
-}
-func (l *noopLedger) Debit(_ context.Context, _ string, _, _ int64) error { return nil }
-func (l *noopLedger) Settle(_ context.Context, _ string) error            { return nil }
-func (l *noopLedger) Reverse(_ context.Context, _ string) error           { return nil }
 
 func env(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
