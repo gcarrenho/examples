@@ -1,0 +1,17 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    # schema.sql = static snapshot of the current DB state; used only for sqlc type inference.
+    # Runtime migrations live in migrations/ and are applied by store.go on startup.
+    schema: "schema.sql"
+    # queries/ holds one file per bounded context; add a new file as the domain grows.
+    queries: "queries/"
+    gen:
+      go:
+        package: "ledger"
+        out: "."
+        emit_prepared_queries: false
+        emit_interface: false
+        emit_exact_table_names: false
+        emit_empty_slices: true
+        sql_package: "pgx/v5"
